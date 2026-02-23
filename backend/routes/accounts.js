@@ -1,30 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // luodaan kohta
+const db = require('../db');
 
-// GET last 10 transactions
 router.get('/:id/transactions', async (req, res) => {
-  const accountId = req.params.id;
+  const accountId = Number(req.params.id);
+  const limit = Number(req.query.limit ?? 10);
+
+  // Validate inputs
+  if (!Number.isInteger(accountId) || accountId <= 0) {
+    return res.status(400).json({ error: 'Invalid account id' });
+  }
+
+  const safeLimit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 10;
 
   try {
-    const [rows] = await db.execute(
-      `
-      SELECT
-        t.id,
-        t.tx_type,
-        t.amount,
-        t.created_at
+    const sql = `
+      SELECT t.id, t.tx_type, t.amount, t.created_at
       FROM transactions t
       WHERE t.account_id = ?
       ORDER BY t.created_at DESC, t.id DESC
-      LIMIT 10
-      `,
-      [accountId]
-    );
+      LIMIT ${safeLimit}
+    `;
 
+    const [rows] = await db.execute(sql, [accountId]);
     res.json(rows);
   } catch (err) {
-    console.error(err);
+    console.error('DB error in /accounts/:id/transactions:', err);
     res.status(500).json({ error: 'Database error' });
   }
 });
