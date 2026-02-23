@@ -30,4 +30,82 @@ router.get('/:id/transactions', async (req, res) => {
   }
 });
 
+// GET /accounts/:id/balance
+router.get('/:id/balance', async (req, res) => {
+  const accountId = Number(req.params.id);
+  if (!Number.isInteger(accountId) || accountId <= 0) {
+    return res.status(400).json({ error: 'Invalid account id' });
+  }
+
+  try {
+    const [rows] = await db.execute(
+      `SELECT id, account_type, balance, credit_limit FROM accounts WHERE id = ?`,
+      [accountId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Balance error:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// POST /accounts/:id/withdraw
+// body: { "amount": 50 }
+router.post('/:id/withdraw', async (req, res) => {
+  const accountId = Number(req.params.id);
+  const amount = Number(req.body.amount);
+
+  const allowed = new Set([20, 40, 50, 100]);
+  if (!Number.isInteger(accountId) || accountId <= 0) {
+    return res.status(400).json({ error: 'Invalid account id' });
+  }
+  if (!allowed.has(amount)) {
+    return res.status(400).json({ error: 'Invalid amount (allowed: 20,40,50,100)' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Lock the account row for update
+    const [rows] = await conn.execute(
+      `SELECT balance FROM accounts WHERE id = ? FOR UPDATE`,
+      [accountId]
+    );
+    if (rows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const balance = Number(rows[0].balance);
+    if (balance < amount) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Insufficient funds' });
+    }
+
+    const newBalance = balance - amount;
+
+    await conn.execute(
+      `UPDATE accounts SET balance = ? WHERE id = ?`,
+      [newBalance, accountId]
+    );
+
+    await conn.execute(
+      `INSERT INTO transactions (account_id, amount, tx_type) VALUES (?, ?, 'withdrawal')`,
+      [accountId, amount]
+    );
+
+    await conn.commit();
+    res.json({ ok: true, accountId, withdrawn: amount, balance: newBalance });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Withdraw error:', err);
+    res.status(500).json({ error: 'Database error' });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;
