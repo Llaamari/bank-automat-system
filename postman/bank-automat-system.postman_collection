@@ -9,7 +9,7 @@
   },
   "item": [
     {
-      "name": "http://localhost/api/health",
+      "name": "{{baseUrl}}/api/health",
       "event": [
         {
           "listen": "test",
@@ -48,10 +48,9 @@
           }
         },
         "url": {
-          "raw": "http://localhost/api/health",
-          "protocol": "http",
+          "raw": "{{baseUrl}}/api/health",
           "host": [
-            "localhost"
+            "{{baseUrl}}"
           ],
           "path": [
             "api",
@@ -62,7 +61,7 @@
       "response": []
     },
     {
-      "name": "http://localhost/api//auth/login",
+      "name": "{{baseUrl}}/api/auth/login",
       "request": {
         "auth": {
           "type": "noauth"
@@ -79,10 +78,9 @@
           }
         },
         "url": {
-          "raw": "http://localhost/api/auth/login",
-          "protocol": "http",
+          "raw": "{{baseUrl}}/api/auth/login",
           "host": [
-            "localhost"
+            "{{baseUrl}}"
           ],
           "path": [
             "api",
@@ -94,7 +92,7 @@
       "response": []
     },
     {
-      "name": "http://localhost/api/accounts/:id/balance",
+      "name": "{{baseUrl}}/api/accounts/:id/balance",
       "request": {
         "auth": {
           "type": "noauth"
@@ -102,10 +100,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost/api/accounts/:id/balance",
-          "protocol": "http",
+          "raw": "{{baseUrl}}/api/accounts/:id/balance",
           "host": [
-            "localhost"
+            "{{baseUrl}}"
           ],
           "path": [
             "api",
@@ -124,7 +121,7 @@
       "response": []
     },
     {
-      "name": "http://localhost/api/accounts/:id/withdraw",
+      "name": "{{baseUrl}}/api/accounts/:id/withdraw",
       "request": {
         "auth": {
           "type": "noauth"
@@ -141,10 +138,9 @@
           }
         },
         "url": {
-          "raw": "http://localhost/api/accounts/:id/withdraw",
-          "protocol": "http",
+          "raw": "{{baseUrl}}/api/accounts/:id/withdraw",
           "host": [
-            "localhost"
+            "{{baseUrl}}"
           ],
           "path": [
             "api",
@@ -163,7 +159,7 @@
       "response": []
     },
     {
-      "name": "http://localhost/api/accounts/:id/transactions",
+      "name": "{{baseUrl}}/api/accounts/:id/transactions?limit=10",
       "request": {
         "auth": {
           "type": "noauth"
@@ -171,10 +167,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost/api/accounts/:id/transactions?limit=10",
-          "protocol": "http",
+          "raw": "{{baseUrl}}/api/accounts/:id/transactions?limit=10",
           "host": [
-            "localhost"
+            "{{baseUrl}}"
           ],
           "path": [
             "api",
