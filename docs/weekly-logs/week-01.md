@@ -60,3 +60,46 @@ Reverse proxy routing works correctly:
 - `/` serves a static page (optional)
 - `/api/*` is forwarded to backend routes
 - Required endpoints function through the proxy without backend route changes.
+
+## Reverse Proxy Error Scenario Tests
+
+**Date:** 2026-02-24  
+**Environment:** Local development (Nginx reverse proxy + Node/Express backend)  
+**Entry point:** http://localhost (API via /api/*)
+
+### 1) Backend Down (Upstream Unavailable)
+
+**Procedure:**
+- Stopped the Node.js backend process (Ctrl+C).
+- Called: `GET /api/health` through the reverse proxy.
+
+**Observed result:**
+- Nginx returned **502 Bad Gateway**.
+- This clearly indicates that the upstream backend is not reachable.
+
+**Conclusion:**
+- Reverse proxy fails safely and provides a clear error response when backend is down.
+
+### 2) Timeout Behavior (Basic)
+
+**Procedure:**
+- Added a temporary test endpoint: `GET /health/slow` (3s delay) for timeout testing.
+- Set Nginx `proxy_read_timeout` to **1s**.
+- Called: `GET /api/health/slow`.
+
+**Observed result:**
+- Nginx returned **504 Gateway Timeout**.
+- After restoring `proxy_read_timeout` to **10s**, the request succeeded with **200 OK**.
+
+**Configuration adjustment:**
+- `proxy_read_timeout` should be kept at a reasonable value (e.g., 10s) for development.
+- The low timeout was used only to verify proxy timeout behavior.
+
+### 3) Large Request Handling (Basic)
+
+**Procedure:**
+- Considered large request payloads. ATM-related API requests are expected to remain small (login, withdraw, balance queries).
+- Optional: Nginx `client_max_body_size` can be used to limit payload size and return **413 Payload Too Large**.
+
+**Conclusion:**
+- The system behaves predictably for upstream failures and basic timeout conditions.
