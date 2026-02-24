@@ -12,14 +12,17 @@ const crudAccounts = require('./routes/crud/accounts');
 const crudCards = require('./routes/crud/cards');
 const crudTransactions = require('./routes/crud/transactions');
 const crudCardAccounts = require('./routes/crud/card_accounts');
+const cors = require('cors');
 
 var app = express();
 
+app.set('trust proxy', 1);
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors({ origin: true })); // dev-only
 
 app.use('/', indexRouter);
 app.use('/health', healthRouter);

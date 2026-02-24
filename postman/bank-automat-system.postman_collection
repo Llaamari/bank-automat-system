@@ -9,7 +9,7 @@
   },
   "item": [
     {
-      "name": "http://localhost:3000/health",
+      "name": "http://localhost/api/health",
       "event": [
         {
           "listen": "test",
@@ -48,13 +48,13 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/health",
+          "raw": "http://localhost/api/health",
           "protocol": "http",
           "host": [
             "localhost"
           ],
-          "port": "3000",
           "path": [
+            "api",
             "health"
           ]
         }
@@ -62,7 +62,7 @@
       "response": []
     },
     {
-      "name": "http://localhost:3000/auth/login",
+      "name": "http://localhost/api//auth/login",
       "request": {
         "auth": {
           "type": "noauth"
@@ -71,7 +71,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{ \"cardId\": 1, \"pin\": \"1234\" }",
+          "raw": "{ \"cardNumber\": \"1234567890123456\", \"pin\": \"1234\" }",
           "options": {
             "raw": {
               "language": "json"
@@ -79,13 +79,13 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/auth/login",
+          "raw": "http://localhost/api/auth/login",
           "protocol": "http",
           "host": [
             "localhost"
           ],
-          "port": "3000",
           "path": [
+            "api",
             "auth",
             "login"
           ]
@@ -94,7 +94,7 @@
       "response": []
     },
     {
-      "name": "http://localhost:3000/accounts/:id/balance",
+      "name": "http://localhost/api/accounts/:id/balance",
       "request": {
         "auth": {
           "type": "noauth"
@@ -102,13 +102,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/accounts/:id/balance",
+          "raw": "http://localhost/api/accounts/:id/balance",
           "protocol": "http",
           "host": [
             "localhost"
           ],
-          "port": "3000",
           "path": [
+            "api",
             "accounts",
             ":id",
             "balance"
@@ -124,7 +124,7 @@
       "response": []
     },
     {
-      "name": "http://localhost:3000/accounts/:id/withdraw",
+      "name": "http://localhost/api/accounts/:id/withdraw",
       "request": {
         "auth": {
           "type": "noauth"
@@ -141,13 +141,13 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3000/accounts/:id/withdraw",
+          "raw": "http://localhost/api/accounts/:id/withdraw",
           "protocol": "http",
           "host": [
             "localhost"
           ],
-          "port": "3000",
           "path": [
+            "api",
             "accounts",
             ":id",
             "withdraw"
@@ -163,7 +163,7 @@
       "response": []
     },
     {
-      "name": "http://localhost:3000/accounts/:id/transactions",
+      "name": "http://localhost/api/accounts/:id/transactions",
       "request": {
         "auth": {
           "type": "noauth"
@@ -171,13 +171,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/accounts/:id/transactions?limit=10",
+          "raw": "http://localhost/api/accounts/:id/transactions?limit=10",
           "protocol": "http",
           "host": [
             "localhost"
           ],
-          "port": "3000",
           "path": [
+            "api",
             "accounts",
             ":id",
             "transactions"
