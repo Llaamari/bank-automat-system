@@ -164,3 +164,20 @@ Nginx maps `/api/<path>` → backend `/<path>`.
 - `GET /api/accounts/1/balance` → backend `GET /accounts/1/balance`
 
 This keeps the reverse proxy entrypoint clean and production-like, while clearly separating static content (`/`) from API traffic (`/api/*`).
+
+### TLS / HTTPS Plan (Optional)
+
+**Decision:**
+- **Local development:** TLS is not used. The system runs over plain HTTP to keep the setup simple and frictionless during development.
+- **Optional VPS deployment:** If the API is deployed to a public VPS later, TLS/HTTPS will be enabled using **Let's Encrypt** certificates.
+
+**What we do now:**
+- Use `http://localhost` (Nginx on port 80) as the reverse proxy entrypoint.
+- All API calls in development go through HTTP (no certificates required).
+
+**What we may do later (VPS):**
+- Configure a real domain name (e.g., `api.example.com`) pointing to the VPS.
+- Enable HTTPS in Nginx and obtain certificates via Let's Encrypt (e.g., using Certbot).
+- Redirect HTTP → HTTPS to ensure secure traffic by default.
+
+This phased approach keeps development lightweight while still supporting a production-like secure deployment as an optional extension.
