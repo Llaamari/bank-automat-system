@@ -1,18 +1,19 @@
-#ifndef STARTWINDOW_H
-#define STARTWINDOW_H
+#pragma once
 
 #include <QWidget>
 
-namespace Ui {
-class StartWindow;
-}
+class ApiClient;
+
+QT_BEGIN_NAMESPACE
+namespace Ui { class StartWindow; }
+QT_END_NAMESPACE
 
 class StartWindow : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit StartWindow(QWidget *parent = nullptr);
+    explicit StartWindow(ApiClient* api, QWidget *parent = nullptr);
     ~StartWindow();
 
 private slots:
@@ -20,6 +21,5 @@ private slots:
 
 private:
     Ui::StartWindow *ui;
+    ApiClient* m_api = nullptr;
 };
-
-#endif // STARTWINDOW_H

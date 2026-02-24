@@ -8,12 +8,10 @@ qt_standard_project_setup()
 qt_add_executable(bank-automat
     WIN32 MACOSX_BUNDLE
     main.cpp
-    MainWindow.cpp
+    MainWindow.cpp MainWindow.h MainWindow.ui
 
-    MainWindow.ui
     StartWindow.h StartWindow.cpp StartWindow.ui
     LoginDialog.h LoginDialog.cpp LoginDialog.ui
-    MainWindow.h MainWindow.cpp MainWindow.ui
     ApiClient.h ApiClient.cpp
 
 

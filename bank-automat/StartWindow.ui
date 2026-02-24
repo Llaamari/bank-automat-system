@@ -6,38 +6,47 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>1963</width>
+    <height>974</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QLabel" name="label">
+  <widget class="QWidget" name="widget" native="true">
    <property name="geometry">
     <rect>
-     <x>160</x>
-     <y>60</y>
-     <width>81</width>
-     <height>16</height>
+     <x>1170</x>
+     <y>440</y>
+     <width>181</width>
+     <height>161</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Bank Automat</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="startButton">
-   <property name="geometry">
-    <rect>
-     <x>160</x>
-     <y>140</y>
-     <width>80</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Start</string>
-   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="label">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="text">
+       <string>Bank Automat</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignmentFlag::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="startButton">
+      <property name="text">
+       <string>Start</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>

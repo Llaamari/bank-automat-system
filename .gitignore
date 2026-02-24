@@ -3,3 +3,4 @@ bank-automat/build/
 bank-automat/.qtcreator/
 bank-automat/*.user
 backend/.env
+.vscode
