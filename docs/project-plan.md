@@ -181,3 +181,34 @@ This keeps the reverse proxy entrypoint clean and production-like, while clearly
 - Redirect HTTP → HTTPS to ensure secure traffic by default.
 
 This phased approach keeps development lightweight while still supporting a production-like secure deployment as an optional extension.
+
+### Reverse Proxy Risks & Must-Have Settings
+
+To ensure correct behavior and easier debugging, the reverse proxy configuration must include the following **must-have settings**:
+
+**Forwarded headers (client info):**
+- Forward the original client IP chain using `X-Forwarded-For`.
+- Forward the client IP using `X-Real-IP`.
+- Forward the original protocol using `X-Forwarded-Proto` (important for future HTTPS).
+- Preserve the original `Host` header.
+
+**Proxy stability settings:**
+- Use HTTP/1.1 towards the upstream (`proxy_http_version 1.1`) and keep connections stable.
+- Disable automatic upstream redirects where appropriate (`proxy_redirect off`).
+
+**Timeouts (to avoid hanging requests and unclear failures):**
+- `proxy_connect_timeout` (connecting to backend)
+- `proxy_send_timeout` (sending request to backend)
+- `proxy_read_timeout` (reading response from backend)
+
+**Logging (operational visibility):**
+- Enable access logs for all requests.
+- Enable error logs for proxy/upstream failures (e.g., 502/504).
+- Include upstream information and response time in logs to support troubleshooting.
+
+**Main risks if these are missing or misconfigured:**
+- Backend sees the proxy IP instead of the real client IP (incorrect auditing/debugging).
+- Backend cannot detect HTTPS correctly later (wrong redirects / URL generation).
+- Lack of logs makes troubleshooting slow (502/504 issues).
+- Missing/incorrect timeouts may cause hung connections or premature failures.
+- Incorrect `/api` path mapping can break endpoint routing.
