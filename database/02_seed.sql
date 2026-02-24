@@ -35,3 +35,6 @@ VALUES
   (1, 100.00, 'withdrawal'),
   (2,  40.00, 'withdrawal'),
   (2,  20.00, 'withdrawal');
+
+UPDATE cards SET card_number = '1234567890123456' WHERE id = 1;
+UPDATE cards SET card_number = '9876543210987654' WHERE id = 2;

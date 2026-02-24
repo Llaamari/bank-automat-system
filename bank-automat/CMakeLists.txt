@@ -1,23 +1,25 @@
 cmake_minimum_required(VERSION 3.19)
 project(bank-automat LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 
 qt_standard_project_setup()
 
 qt_add_executable(bank-automat
     WIN32 MACOSX_BUNDLE
     main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
+    MainWindow.cpp
+
+    MainWindow.ui
+    StartWindow.h StartWindow.cpp StartWindow.ui
+    LoginDialog.h LoginDialog.cpp LoginDialog.ui
+    MainWindow.h MainWindow.cpp MainWindow.ui
+    ApiClient.h ApiClient.cpp
+
+
 )
 
-target_link_libraries(bank-automat
-    PRIVATE
-        Qt::Core
-        Qt::Widgets
-)
+target_link_libraries(bank-automat PRIVATE Qt6::Widgets Qt6::Network)
 
 include(GNUInstallDirs)
 
