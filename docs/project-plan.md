@@ -104,3 +104,23 @@ The backend API (Node.js / Express) will be placed behind a reverse proxy using 
 The API will be accessed through the reverse proxy (e.g., `http://localhost` → Nginx → `http://localhost:3000`).
 
 This setup improves architectural clarity and simulates a real-world production deployment model.
+
+### Target Environment
+
+**Primary environment:** Local development environment  
+**Optional extension:** VPS deployment (future enhancement)
+
+The reverse proxy (Nginx) will initially be configured and tested in a local development environment.
+
+**Local setup architecture:**
+
+Client → Nginx (localhost) → Node.js/Express API (localhost:3000) → MySQL (localhost)
+
+This approach allows:
+- Full testing of reverse proxy functionality
+- Demonstration of production-like architecture
+- Controlled debugging without network-related variables
+
+VPS deployment is considered a possible future extension. If implemented later, the same Nginx configuration can be adapted for a remote Linux server, including optional TLS configuration.
+
+Docker is not included in the initial scope in order to keep the infrastructure simple and focused on reverse proxy implementation.
