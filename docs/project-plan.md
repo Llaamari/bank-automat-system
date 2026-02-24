@@ -148,3 +148,19 @@ This approach:
 - Works consistently across operating systems
 
 If a VPS deployment is implemented later, a proper domain name can be configured.
+
+### Reverse Proxy Routing Design
+
+**Selected URL model (development):**
+- `http://localhost/` serves an optional static landing / API info page (from Nginx).
+- `http://localhost/api/*` is forwarded to the backend API running at `http://localhost:3000`.
+
+**Routing rule:**
+Nginx maps `/api/<path>` → backend `/<path>`.
+
+**Examples:**
+- `GET /api/health` → backend `GET /health`
+- `POST /api/auth/login` → backend `POST /auth/login`
+- `GET /api/accounts/1/balance` → backend `GET /accounts/1/balance`
+
+This keeps the reverse proxy entrypoint clean and production-like, while clearly separating static content (`/`) from API traffic (`/api/*`).
