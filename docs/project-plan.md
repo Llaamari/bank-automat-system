@@ -85,3 +85,22 @@ Mitigation:
 - Incremental testing
 - Version control
 - Early integration testing
+
+## 6. Reverse Proxy (Extra Feature)
+
+### Selected Solution: Nginx
+
+**Decision:**  
+The backend API (Node.js / Express) will be placed behind a reverse proxy using **Nginx**.
+
+**Rationale:**
+- Nginx is a widely used and well-documented reverse proxy solution.
+- It is commonly used in production environments in front of Node/Express applications.
+- Configuration is clear and flexible (proxy_pass, headers, timeouts, logging).
+- Suitable for both local development and potential VPS deployment.
+- Enables future support for TLS (e.g., Let's Encrypt) if the application is deployed publicly.
+
+**Goal:**  
+The API will be accessed through the reverse proxy (e.g., `http://localhost` → Nginx → `http://localhost:3000`).
+
+This setup improves architectural clarity and simulates a real-world production deployment model.
