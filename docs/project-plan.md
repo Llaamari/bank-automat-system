@@ -124,3 +124,27 @@ This approach allows:
 VPS deployment is considered a possible future extension. If implemented later, the same Nginx configuration can be adapted for a remote Linux server, including optional TLS configuration.
 
 Docker is not included in the initial scope in order to keep the infrastructure simple and focused on reverse proxy implementation.
+
+### Development Domain / Hostname
+
+The development environment will use:
+
+**Hostname:** localhost  
+**Reverse proxy port:** 80  
+**Backend internal port:** 3000
+
+The API will be accessed through:
+
+http://localhost
+
+Nginx will listen on port 80 and forward requests to:
+
+http://localhost:3000
+
+This approach:
+- Avoids modifying the system hosts file
+- Keeps the setup simple and portable
+- Simulates a real production-like reverse proxy architecture
+- Works consistently across operating systems
+
+If a VPS deployment is implemented later, a proper domain name can be configured.
