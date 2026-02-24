@@ -1,13 +1,49 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Express</title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank Automat API</title>
+  <link rel="stylesheet" href="/stylesheets/style.css" />
 </head>
 
 <body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
-</body>
+  <h1>🏦 Bank Automat REST API</h1>
 
+  <p>This is the backend API for the Bank Automat System.</p>
+
+  <h2>Base URL</h2>
+  <code>http://localhost:3000</code>
+
+  <h2>Available Endpoints</h2>
+
+  <h3>Authentication</h3>
+  <ul>
+    <li><code>POST /auth/login</code></li>
+  </ul>
+
+  <h3>Account Operations</h3>
+  <ul>
+    <li><code>GET /accounts/:id/balance</code></li>
+    <li><code>POST /accounts/:id/withdraw</code></li>
+    <li><code>GET /accounts/:id/transactions?limit=10</code></li>
+  </ul>
+
+  <h3>System</h3>
+  <ul>
+    <li><code>GET /health</code></li>
+  </ul>
+
+  <h3>CRUD (Development Only)</h3>
+  <ul>
+    <li><code>/crud/customers</code></li>
+    <li><code>/crud/accounts</code></li>
+    <li><code>/crud/cards</code></li>
+    <li><code>/crud/card-accounts</code></li>
+    <li><code>/crud/transactions</code></li>
+  </ul>
+
+  <hr />
+  <p>Status: <strong>Development Mode</strong></p>
+</body>
 </html>
