@@ -3,11 +3,30 @@ const bcrypt = require('bcrypt');
 const router = express.Router();
 const db = require('../../db');
 
+// Generate a random 16-digit card number (string)
+function generateCardNumber() {
+  let s = '';
+  for (let i = 0; i < 16; i++) s += Math.floor(Math.random() * 10);
+  return s;
+}
+
+async function generateUniqueCardNumber(maxAttempts = 10) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const candidate = generateCardNumber();
+    const [rows] = await db.execute(
+      `SELECT id FROM cards WHERE card_number = ? LIMIT 1`,
+      [candidate]
+    );
+    if (rows.length === 0) return candidate;
+  }
+  throw new Error('Failed to generate unique card number');
+}
+
 // Do NOT return pin_hash
 router.get('/', async (_req, res) => {
   try {
     const [rows] = await db.execute(
-      `SELECT id, customer_id, status, created_at FROM cards ORDER BY id DESC`
+      `SELECT id, card_number, customer_id, status, created_at FROM cards ORDER BY id DESC`
     );
     res.json(rows);
   } catch (err) {
@@ -22,7 +41,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      `SELECT id, customer_id, status, created_at FROM cards WHERE id = ?`,
+      `SELECT id, card_number, customer_id, status, created_at FROM cards WHERE id = ?`,
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
@@ -45,12 +64,22 @@ router.post('/', async (req, res) => {
   if (!['active', 'locked'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
   try {
+    // Validate customer exists (clear error instead of FK constraint failure)
+    const [custRows] = await db.execute(`SELECT id FROM customers WHERE id = ?`, [customerId]);
+    if (custRows.length === 0) return res.status(404).json({ error: 'Customer not found' });
+
+    const cardNumber = await generateUniqueCardNumber();
     const pinHash = await bcrypt.hash(pin, 10);
     const [result] = await db.execute(
-      `INSERT INTO cards (customer_id, pin_hash, status) VALUES (?, ?, ?)`,
-      [customerId, pinHash, status]
+      `INSERT INTO cards (card_number, customer_id, pin_hash, status) VALUES (?, ?, ?, ?)`,
+      [cardNumber, customerId, pinHash, status]
     );
-    res.status(201).json({ id: result.insertId, customer_id: customerId, status });
+    res.status(201).json({
+      id: result.insertId,
+      card_number: cardNumber,
+      customer_id: customerId,
+      status
+    });
   } catch (err) {
     console.error('cards POST:', err);
     res.status(500).json({ error: 'Database error' });
