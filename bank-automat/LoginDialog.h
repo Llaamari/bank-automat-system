@@ -20,6 +20,7 @@ public:
 
 private slots:
     void on_loginButton_clicked();
+    void on_cancelButton_clicked();
     void onLoginResult(bool ok, int accountId, QString error);
 
 private:

@@ -21,6 +21,9 @@ LoginDialog::LoginDialog(ApiClient* api, QWidget *parent)
     // Yhdistä ApiClient login-signaali
     connect(m_api, &ApiClient::loginResult,
             this, &LoginDialog::onLoginResult);
+
+    connect(ui->pinLineEdit, &QLineEdit::returnPressed,
+        this, &LoginDialog::on_loginButton_clicked);
 }
 
 LoginDialog::~LoginDialog()
@@ -50,6 +53,11 @@ void LoginDialog::on_loginButton_clicked()
     ui->loginButton->setText("Logging in...");
 
     m_api->login(cardNumber, pin);
+}
+
+void LoginDialog::on_cancelButton_clicked()
+{
+    reject();
 }
 
 void LoginDialog::onLoginResult(bool ok, int accountId, QString error)
