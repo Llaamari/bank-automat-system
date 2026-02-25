@@ -2,7 +2,9 @@
 #include "ui_LoginDialog.h"
 #include "ApiClient.h"
 
+#include <QEvent>
 #include <QMessageBox>
+#include <QWidget>
 
 static constexpr int PIN_TIMEOUT_MS = 10 * 1000;
 
@@ -26,6 +28,13 @@ LoginDialog::LoginDialog(ApiClient* api, QWidget *parent)
 
     connect(ui->pinLineEdit, &QLineEdit::returnPressed,
         this, &LoginDialog::on_loginButton_clicked);
+
+    // --- Resetoi timeout *mistä tahansa* käyttäjäaktiivisuudesta dialogissa ---
+    this->installEventFilter(this);
+    const auto widgets = this->findChildren<QWidget*>();
+    for (QWidget *w : widgets) {
+        w->installEventFilter(this);
+    }
 
     // --- PIN syötön aikaraja (10 s) ---
     m_timeoutTimer.setInterval(PIN_TIMEOUT_MS);
@@ -68,6 +77,7 @@ void LoginDialog::on_loginButton_clicked()
 
     // Estä timeout laukeamasta kesken backend-vastauksen.
     // Jos login epäonnistuu, käynnistetään timer uudelleen onLoginResultissa.
+    m_loginInProgress = true;
     m_timeoutTimer.stop();
 
     // Disable button while waiting
@@ -88,6 +98,8 @@ void LoginDialog::onLoginResult(bool ok, int accountId, QString error)
     // Enable button again
     ui->loginButton->setEnabled(true);
     ui->loginButton->setText("Login");
+
+    m_loginInProgress = false;
 
     if (!ok) {
         ui->errorLabel->setText(
@@ -118,5 +130,39 @@ void LoginDialog::onTimeout()
 
 void LoginDialog::resetTimeout()
 {
+    // Älä käynnistä timeoutia, jos odotetaan login-vastausta.
+    if (m_loginInProgress) {
+        return;
+    }
     m_timeoutTimer.start();
+}
+
+bool LoginDialog::eventFilter(QObject *obj, QEvent *event)
+{
+    Q_UNUSED(obj);
+
+    // Kun odotetaan backend-vastausta, ei resetoida / käynnistetä timeria uudelleen.
+    if (m_loginInProgress) {
+        return QDialog::eventFilter(obj, event);
+    }
+
+    // Resetoi 10s laskuri kaikesta relevantista aktiviteetista.
+    switch (event->type()) {
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+    case QEvent::MouseMove:
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+    case QEvent::Wheel:
+    case QEvent::TouchBegin:
+    case QEvent::TouchUpdate:
+    case QEvent::TouchEnd:
+    case QEvent::FocusIn:
+        resetTimeout();
+        break;
+    default:
+        break;
+    }
+
+    return QDialog::eventFilter(obj, event);
 }

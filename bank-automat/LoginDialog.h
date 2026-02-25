@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include <QEvent>
 #include <QTimer>
 
 class ApiClient;
@@ -19,6 +20,10 @@ public:
 
     int accountId() const;
 
+protected:
+    // Reset inactivity timer on any user activity inside the dialog
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private slots:
     void on_loginButton_clicked();
     void on_cancelButton_clicked();
@@ -31,4 +36,5 @@ private:
     ApiClient* m_api = nullptr;
     int m_accountId = -1;
     QTimer m_timeoutTimer;
+    bool m_loginInProgress = false;
 };
