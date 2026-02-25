@@ -133,3 +133,19 @@ CRUD endpoints for all tables under /crud/...
 - Credit account logic
 - Docker deployment
 - Automated testing
+
+## 9. Reverse Proxy Logging (Nginx)
+
+Nginx access and error logging was enabled to support debugging and operational visibility.
+
+- Access log: `logs/access.log`
+- Error log: `logs/error.log`
+
+**Example access log entry (GET /api/health):**
+```text
+127.0.0.1 - - [25/Feb/2026:12:34:56 +0200] "GET /api/health HTTP/1.1" 200 27 "-" "PostmanRuntime/7.36.0" rt=0.012 uct=0.001 urt=0.010 uaddr=127.0.0.1:3000 ustatus=200
+```
+Example error log entry (backend down, 502):
+```text
+[error] ... connect() failed (...) while connecting to upstream, client: 127.0.0.1, server: localhost, request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:3000/health", host: "localhost"
+```
