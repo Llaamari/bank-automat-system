@@ -4,6 +4,8 @@
 
 #include <QMessageBox>
 
+static constexpr int PIN_TIMEOUT_MS = 10 * 1000;
+
 LoginDialog::LoginDialog(ApiClient* api, QWidget *parent)
     : QDialog(parent),
       ui(new Ui::LoginDialog),
@@ -24,6 +26,19 @@ LoginDialog::LoginDialog(ApiClient* api, QWidget *parent)
 
     connect(ui->pinLineEdit, &QLineEdit::returnPressed,
         this, &LoginDialog::on_loginButton_clicked);
+
+    // --- PIN syötön aikaraja (10 s) ---
+    m_timeoutTimer.setInterval(PIN_TIMEOUT_MS);
+    m_timeoutTimer.setSingleShot(true);
+    connect(&m_timeoutTimer, &QTimer::timeout, this, &LoginDialog::onTimeout);
+
+    // Resetoi timeout käyttäjäaktiivisuudesta
+    connect(ui->pinLineEdit, &QLineEdit::textEdited, this, &LoginDialog::resetTimeout);
+    connect(ui->cardNumberLineEdit, &QLineEdit::textEdited, this, &LoginDialog::resetTimeout);
+    connect(ui->loginButton, &QPushButton::clicked, this, &LoginDialog::resetTimeout);
+    connect(ui->cancelButton, &QPushButton::clicked, this, &LoginDialog::resetTimeout);
+
+    m_timeoutTimer.start();
 }
 
 LoginDialog::~LoginDialog()
@@ -40,6 +55,9 @@ void LoginDialog::on_loginButton_clicked()
 {
     ui->errorLabel->clear();
 
+    // Käyttäjä teki toiminnon -> resetoi aikaraja
+    resetTimeout();
+
     QString cardNumber = ui->cardNumberLineEdit->text().trimmed();
     QString pin = ui->pinLineEdit->text();
 
@@ -47,6 +65,10 @@ void LoginDialog::on_loginButton_clicked()
         ui->errorLabel->setText("Card number and PIN are required.");
         return;
     }
+
+    // Estä timeout laukeamasta kesken backend-vastauksen.
+    // Jos login epäonnistuu, käynnistetään timer uudelleen onLoginResultissa.
+    m_timeoutTimer.stop();
 
     // Disable button while waiting
     ui->loginButton->setEnabled(false);
@@ -57,6 +79,7 @@ void LoginDialog::on_loginButton_clicked()
 
 void LoginDialog::on_cancelButton_clicked()
 {
+    m_timeoutTimer.stop();
     reject();
 }
 
@@ -70,11 +93,30 @@ void LoginDialog::onLoginResult(bool ok, int accountId, QString error)
         ui->errorLabel->setText(
             error.isEmpty() ? "Login failed." : error
         );
+        // Käynnistä timeout uudelleen, jotta käyttäjä ei jää dialogiin ikuisesti.
+        resetTimeout();
         return;
     }
 
     // Success
     m_accountId = accountId;
 
+    // Onnistunut login -> timer ei saa laueta enää
+    m_timeoutTimer.stop();
     accept();  // Sulkee dialogin QDialog::Accepted tilassa
+}
+
+void LoginDialog::onTimeout()
+{
+    // 10 s ilman riittävää toimintaa -> takaisin aloitusnäyttöön
+    ui->pinLineEdit->clear();
+    ui->cardNumberLineEdit->clear();
+    ui->errorLabel->clear();
+
+    reject();
+}
+
+void LoginDialog::resetTimeout()
+{
+    m_timeoutTimer.start();
 }
