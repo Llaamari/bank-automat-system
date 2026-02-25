@@ -149,3 +149,121 @@ Example error log entry (backend down, 502):
 ```text
 [error] ... connect() failed (...) while connecting to upstream, client: 127.0.0.1, server: localhost, request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:3000/health", host: "localhost"
 ```
+
+##  10. Demo: API Behind Reverse Proxy (Nginx)
+
+### Objective
+
+Demonstrate that the backend API runs behind a reverse proxy (Nginx) and that all routing works correctly through the proxy entrypoint.
+
+### Architecture Overview (Demo Explanation)
+
+In development, the system uses the following architecture:
+
+Client (Browser / Postman / Qt)
+→ http://localhost (Nginx reverse proxy)
+→ http://localhost:3000 (Node.js / Express backend)
+→ MySQL database
+
+The reverse proxy:
+
+- Serves a static landing page at `/`
+- Forwards `/api/*` to the backend
+- Strips the `/api` prefix before forwarding
+- Adds standard proxy headers (X-Forwarded-For, X-Forwarded-Proto)
+- Logs access and error events
+
+### Step 1 – Show Reverse Proxy Entry Point
+
+Open browser:
+
+http://localhost
+
+Show that:
+- Nginx is running
+- Static landing page is served
+- Backend is NOT directly exposed on port 80
+
+### Step 2 – Show API Through Proxy
+
+Call:
+
+GET http://localhost/api/health
+
+Explain:
+- Request goes to Nginx
+- Nginx forwards to backend (localhost:3000)
+- Backend returns JSON response
+- Response is returned through proxy
+
+Expected result:
+200 OK
+
+### Step 3 – Authentication Test
+
+POST http://localhost/api/auth/login
+
+Body:
+{
+  "cardNumber": "...",
+  "pin": "...."
+}
+
+Show:
+- Successful login returns accountId
+- Incorrect PIN returns 401
+- Card status is validated
+
+### Step 4 – Account Operations
+
+Demonstrate:
+
+GET /api/accounts/{id}/balance  
+POST /api/accounts/{id}/withdraw  
+GET /api/accounts/{id}/transactions?limit=10  
+
+Explain:
+- All routes function through proxy
+- No backend route changes were required
+- Business logic is handled by backend
+- Proxy only handles routing and infrastructure
+
+### Step 5 – Failure Scenario (Backend Down)
+
+Stop backend.
+
+Call:
+GET /api/health
+
+Show:
+- Nginx returns 502 Bad Gateway
+- Error is logged in error.log
+- Proxy fails safely
+
+Restart backend and show recovery.
+
+### Step 6 – Logging Demonstration
+
+Open access.log and show:
+
+- Client IP
+- Request path
+- HTTP status
+- Upstream address
+- Upstream response time
+
+Explain:
+- Logging enables debugging and monitoring
+- Proxy and backend responsibilities are separated
+
+### Conclusion
+
+The API runs successfully behind a reverse proxy.
+
+✔ Routing works via /api/*  
+✔ Backend is isolated behind Nginx  
+✔ Errors are handled predictably  
+✔ Logging is enabled  
+✔ Architecture reflects a production-style deployment model  
+
+The implementation was tested using Postman and verified through proxy logs.
