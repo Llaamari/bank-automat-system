@@ -3,6 +3,7 @@
 #include <QDialog>
 #include <QEvent>
 #include <QTimer>
+#include <QShowEvent>
 
 class ApiClient;
 
@@ -23,6 +24,8 @@ public:
 protected:
     // Reset inactivity timer on any user activity inside the dialog
     bool eventFilter(QObject *obj, QEvent *event) override;
+    // Ensure UI is clean every time the dialog is shown
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void on_loginButton_clicked();

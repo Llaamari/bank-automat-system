@@ -120,10 +120,15 @@ void LoginDialog::onLoginResult(bool ok, int accountId, QString error)
 
 void LoginDialog::onTimeout()
 {
+    m_timeoutTimer.stop();
+    m_loginInProgress = false;
+
     // 10 s ilman riittävää toimintaa -> takaisin aloitusnäyttöön
     ui->pinLineEdit->clear();
     ui->cardNumberLineEdit->clear();
     ui->errorLabel->clear();
+    ui->loginButton->setEnabled(true);
+    ui->loginButton->setText("Login");
 
     reject();
 }
@@ -142,7 +147,7 @@ bool LoginDialog::eventFilter(QObject *obj, QEvent *event)
     Q_UNUSED(obj);
 
     // Kun odotetaan backend-vastausta, ei resetoida / käynnistetä timeria uudelleen.
-    if (m_loginInProgress) {
+    if (!this->isVisible()) {
         return QDialog::eventFilter(obj, event);
     }
 
@@ -165,4 +170,25 @@ bool LoginDialog::eventFilter(QObject *obj, QEvent *event)
     }
 
     return QDialog::eventFilter(obj, event);
+}
+
+void LoginDialog::showEvent(QShowEvent *event)
+{
+    QDialog::showEvent(event);
+
+    // Clean UI state every time the dialog is shown
+    ui->pinLineEdit->clear();
+    ui->errorLabel->clear();
+    ui->loginButton->setEnabled(true);
+    ui->loginButton->setText("Login");
+
+    // Focus to a sensible field
+    if (ui->cardNumberLineEdit->text().trimmed().isEmpty()) {
+        ui->cardNumberLineEdit->setFocus();
+    } else {
+        ui->pinLineEdit->setFocus();
+    }
+
+    m_loginInProgress = false;
+    resetTimeout();
 }

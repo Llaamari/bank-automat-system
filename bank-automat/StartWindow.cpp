@@ -38,5 +38,13 @@ void StartWindow::on_startButton_clicked()
 
         // Sulje StartWindow vasta seuraavalla event loop -kierroksella
         QTimer::singleShot(50, this, [this]() { this->close(); });
+    } else {
+        // Timeout / cancel: ensure StartWindow is focused and ready
+        this->show();
+        this->raise();
+        this->activateWindow();
+        if (ui && ui->startButton) {
+            ui->startButton->setFocus();
+        }
     }
 }
