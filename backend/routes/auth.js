@@ -39,9 +39,12 @@ router.post('/login', async (req, res) => {
 
     // Hae tilin ID card_accounts-taulusta
     const [links] = await db.execute(
-      `SELECT account_id FROM card_accounts WHERE card_id = ? ORDER BY role ASC LIMIT 1`,
-      [cardId]
-    );
+  `SELECT account_id
+   FROM card_accounts
+   WHERE card_id = ? AND role = 'debit'
+   LIMIT 1`,
+  [cardId]
+  );
 
     if (links.length === 0) {
       return res.status(500).json({ error: 'Card has no linked account' });
