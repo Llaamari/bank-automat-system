@@ -267,3 +267,78 @@ The API runs successfully behind a reverse proxy.
 ✔ Architecture reflects a production-style deployment model  
 
 The implementation was tested using Postman and verified through proxy logs.
+
+## 11. PIN Code 10-Second Timeout
+
+### Overview
+
+A 10-second inactivity timeout has been implemented in the `LoginDialog`.
+
+If the user does not enter a PIN or otherwise interact with the login interface within 10 seconds, the system will:
+
+1. Clear the PIN field and any error messages  
+2. Close the `LoginDialog`  
+3. Return to the `StartWindow`  
+
+The timeout behaves like a real ATM: **any user activity inside the LoginDialog resets the 10-second timer.**
+
+## 12. User Activity (Timeout Reset)
+
+The inactivity timer is reset by any of the following actions:
+
+- Typing in the PIN field
+- Typing in the card number field
+- Clicking the Login button
+- Moving the mouse inside the dialog
+- Clicking anywhere in the dialog
+- Pressing any key
+- Changing focus between input fields
+
+If a login request is in progress (waiting for backend response), the timeout is temporarily stopped to prevent the dialog from closing during authentication.
+
+### Testing Instructions
+
+### Basic Timeout Test
+
+1. Open the `LoginDialog` from the `StartWindow`.
+2. Do not interact with the UI.
+3. Wait 10 seconds.
+
+**Expected result:**  
+The `LoginDialog` closes automatically and the application returns to the `StartWindow`.
+
+### Timeout Reset Test
+
+1. Open the `LoginDialog`.
+2. Wait approximately 8–9 seconds.
+3. Move the mouse or type something in the PIN field.
+
+**Expected result:**  
+The timer resets and the dialog does not close at the original 10-second mark.
+
+### Login-In-Progress Test
+
+1. Enter card number and PIN.
+2. Click **Login**.
+3. (If backend response takes time)
+
+**Expected result:**  
+The timeout does not trigger while authentication is in progress.
+
+### Demo Presentation (For Instructor)
+
+During the demo, the following will be shown:
+
+1. Open login → wait 10 seconds → automatic return to StartWindow.
+2. Open login → move mouse → timeout does not trigger.
+3. Press Login → no timeout during authentication process.
+
+### Technical Implementation Summary
+
+- `QTimer` (10,000 ms, singleShot mode)
+- `eventFilter` resets the timer on all user activity
+- `m_loginInProgress` prevents timeout during authentication
+- On timeout:
+  - UI fields are cleared
+  - Login button state is restored
+  - Dialog closes via `reject()`
