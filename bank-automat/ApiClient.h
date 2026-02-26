@@ -25,7 +25,7 @@ public:
 signals:
     // Backward-compatible: if backend returns multiple accounts, this will pick one (prefer debit).
     void loginResult(bool ok, int accountId, QString error);
-    // New: on success returns linked accounts: [{"role":"debit"|"credit", "accountId": <int>}]
+    // On success returns linked accounts: [{"role":"debit"|"credit", "accountId": <int>}]
     void loginAccountsResult(bool ok, QJsonArray accounts, QString error);
     void balanceResult(bool ok, QJsonObject data, QString error);
     void withdrawResult(bool ok, QJsonObject data, QString error);

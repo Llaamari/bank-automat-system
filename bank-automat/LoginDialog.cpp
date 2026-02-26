@@ -5,6 +5,7 @@
 #include <QEvent>
 #include <QMessageBox>
 #include <QWidget>
+#include <QLineEdit>
 
 static constexpr int PIN_TIMEOUT_MS = 10 * 1000;
 

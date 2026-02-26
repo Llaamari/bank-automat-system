@@ -144,23 +144,55 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
     postJson("/auth/login", body,
     [this](bool ok, int httpStatus, QJsonDocument json, QString error)
     {
-        // Jos HTTP 401 → väärä login
-        if (!ok && httpStatus == 401) {
-            emit loginResult(false, -1, "Wrong card number or PIN");
-            emit loginAccountsResult(false, QJsonArray(), "Wrong card number or PIN");
-            return;
-        }
 
+        // -------------------------
+        // Error handling
+        // -------------------------
         if (!ok) {
-            const QString msg = error.isEmpty() ? "Login failed." : error;
-            emit loginResult(false, -1, msg);
+            // 401: wrong PIN (or unknown cardNumber). Backend may include attemptsLeft.
+            if (httpStatus == 401 && json.isObject()) {
+                const QJsonObject obj = json.object();
+                if (obj.contains("attemptsLeft")) {
+                    const int left = obj.value("attemptsLeft").toInt(-1);
+                    if (left >= 0) {
+                        const int used = 3 - left;
+                        const QString msg = QString("Incorrect PIN (%1/3)").arg(used);
+                        emit loginAccountsResult(false, QJsonArray(), msg);
+                        emit loginResult(false, -1, msg);
+                        return;
+                    }
+                }
+
+                const QString msg = QStringLiteral("Incorrect card number or PIN");
+                emit loginAccountsResult(false, QJsonArray(), msg);
+                emit loginResult(false, -1, msg);
+                return;
+            }
+
+            // 403: card locked (DB status or runtime lock)
+            if (httpStatus == 403) {
+                QString msg = error.isEmpty() ? QStringLiteral("Card locked") : error;
+                if (msg.contains("liian monta yritystä", Qt::CaseInsensitive)) {
+                    msg = QStringLiteral("Card locked (too many attempts)");
+                }
+                emit loginAccountsResult(false, QJsonArray(), msg);
+                emit loginResult(false, -1, msg);
+                return;
+            }
+
+            const QString msg = error.isEmpty() ? QStringLiteral("Login failed") : error;
             emit loginAccountsResult(false, QJsonArray(), msg);
+            emit loginResult(false, -1, msg);
             return;
         }
 
+        // -------------------------
+        // Success handling
+        // -------------------------
         if (!json.isObject()) {
-            emit loginResult(false, -1, "Invalid response from server");
-            emit loginAccountsResult(false, QJsonArray(), "Invalid response from server");
+            const QString msg = QStringLiteral("Invalid response from server");
+            emit loginAccountsResult(false, QJsonArray(), msg);
+            emit loginResult(false, -1, msg);
             return;
         }
 
@@ -168,8 +200,9 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
         const bool loginOk = obj.value("ok").toBool(false);
 
         if (!loginOk) {
-            emit loginResult(false, -1, "Wrong card number or PIN");
-            emit loginAccountsResult(false, QJsonArray(), "Wrong card number or PIN");
+            const QString msg = QStringLiteral("Incorrect card number or PIN");
+            emit loginAccountsResult(false, QJsonArray(), msg);
+            emit loginResult(false, -1, msg);
             return;
         }
 
@@ -177,8 +210,9 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
         if (obj.contains("accounts") && obj.value("accounts").isArray()) {
             const QJsonArray accounts = obj.value("accounts").toArray();
             if (accounts.isEmpty()) {
-                emit loginResult(false, -1, "Card has no linked accounts");
-                emit loginAccountsResult(false, QJsonArray(), "Card has no linked accounts");
+                const QString msg = QStringLiteral("The card has no linked accounts");
+                emit loginAccountsResult(false, QJsonArray(), msg);
+                emit loginResult(false, -1, msg);
                 return;
             }
 
@@ -194,8 +228,7 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
                 }
             }
             if (preferredId <= 0) {
-                const QJsonObject o = accounts.at(0).toObject();
-                preferredId = o.value("accountId").toInt(-1);
+                preferredId = accounts.at(0).toObject().value("accountId").toInt(-1);
             }
             emit loginResult(true, preferredId, QString());
             return;
@@ -204,8 +237,9 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
         // Backward-compatible fallback: { ok:true, accountId:<int> }
         const int accountId = obj.value("accountId").toInt(-1);
         if (accountId <= 0) {
-            emit loginResult(false, -1, "Invalid response from server");
-            emit loginAccountsResult(false, QJsonArray(), "Invalid response from server");
+            const QString msg = QStringLiteral("Invalid response from server");
+            emit loginAccountsResult(false, QJsonArray(), msg);
+            emit loginResult(false, -1, msg);
             return;
         }
 
@@ -223,7 +257,7 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
 void ApiClient::getBalance(int accountId)
 {
     getJson(QString("/accounts/%1/balance").arg(accountId),
-            [this](bool ok, int, QJsonDocument json, QString error) {
+            [this](bool ok, int /*status*/, QJsonDocument json, QString error) {
         if (!ok) {
             emit balanceResult(false, QJsonObject(), error.isEmpty() ? "Failed to load balance" : error);
             return;
@@ -242,7 +276,7 @@ void ApiClient::withdraw(int accountId, int amount)
     body["amount"] = amount;
 
     postJson(QString("/accounts/%1/withdraw").arg(accountId), body,
-             [this](bool ok, int, QJsonDocument json, QString error) {
+             [this](bool ok, int /*status*/, QJsonDocument json, QString error) {
         if (!ok) {
             emit withdrawResult(false, QJsonObject(), error.isEmpty() ? "Withdraw failed" : error);
             return;
@@ -261,7 +295,7 @@ void ApiClient::getTransactions(int accountId, int limit)
     const int safeLimit = (limit <= 0) ? 10 : (limit > 100 ? 100 : limit);
 
     getJson(QString("/accounts/%1/transactions?limit=%2").arg(accountId).arg(safeLimit),
-            [this](bool ok, int, QJsonDocument json, QString error) {
+            [this](bool ok, int /*status*/, QJsonDocument json, QString error) {
         if (!ok) {
             emit transactionsResult(false, QJsonArray(), error.isEmpty() ? "Failed to load transactions" : error);
             return;
