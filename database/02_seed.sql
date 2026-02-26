@@ -60,11 +60,11 @@ VALUES
 -- -------------------------
 -- PIN = 1234 (bcrypt hash)
 -- This is a common example bcrypt hash for "1234" with $2b$10$... cost 10
-INSERT INTO cards (id, card_number, customer_id, pin_hash, status)
+INSERT INTO cards (id, card_number, customer_id, pin_hash, status, failed_pin_attempts)
 VALUES
-(1001, '11111111', 3001, '$2b$10$7EqJtq98hPqEX7fNZaFWoOaZK0s8AjtKoa6HgMHqmpYyqn1nLvV6e', 'active'),
-(1002, '22222222', 3002, '$2b$10$7EqJtq98hPqEX7fNZaFWoOaZK0s8AjtKoa6HgMHqmpYyqn1nLvV6e', 'active'),
-(1003, '33333333', 3003, '$2b$10$7EqJtq98hPqEX7fNZaFWoOaZK0s8AjtKoa6HgMHqmpYyqn1nLvV6e', 'active');
+(1001, '11111111', 3001, '$2b$10$7EqJtq98hPqEX7fNZaFWoOaZK0s8AjtKoa6HgMHqmpYyqn1nLvV6e', 'active', 0),
+(1002, '22222222', 3002, '$2b$10$7EqJtq98hPqEX7fNZaFWoOaZK0s8AjtKoa6HgMHqmpYyqn1nLvV6e', 'active', 0),
+(1003, '33333333', 3003, '$2b$10$7EqJtq98hPqEX7fNZaFWoOaZK0s8AjtKoa6HgMHqmpYyqn1nLvV6e', 'active', 0);
 
 -- -------------------------
 -- card_accounts links
