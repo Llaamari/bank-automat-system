@@ -7,6 +7,7 @@
 #include <QShortcut>
 #include <QKeySequence>
 #include <QTimer>
+#include <QApplication>
 
 static constexpr int HANDOFF_POLL_MS = 15;
 static constexpr int HANDOFF_MAX_MS  = 1500;
@@ -58,6 +59,12 @@ void StartWindow::on_startButton_clicked()
     if (dlg.exec() == QDialog::Accepted) {
         const int accountId = dlg.accountId();
         const QString role = dlg.accountRole();
+
+        // Make absolutely sure StartWindow covers the screen right after the modal closes
+        this->showFullScreen();
+        this->raise();
+        this->activateWindow();
+        qApp->processEvents(); // force paint before creating MainWindow
 
         // Create + show MainWindow first. Keep StartWindow visible until
         // MainWindow becomes the active top-level window to avoid a brief

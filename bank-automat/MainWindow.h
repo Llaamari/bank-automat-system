@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QTimer>
 #include <QEvent>
+#include <QVector>
 
 class ApiClient;
 
@@ -36,12 +37,17 @@ private slots:
     void on_withdraw50Button_clicked();
     void on_withdraw100Button_clicked();
     void on_refreshTransactionsButton_clicked();
+    void on_prevTransactionsButton_clicked();
+    void on_nextTransactionsButton_clicked();
     void on_customWithdrawButton_clicked();
 
     // API results
     void onBalanceResult(bool ok, QJsonObject data, QString error);
     void onWithdrawResult(bool ok, QJsonObject data, QString error);
     void onTransactionsResult(bool ok, QJsonArray data, QString error);
+    void onTransactionsPageResult(bool ok, QJsonArray items,
+                                  QString nextCursor, QString prevCursor,
+                                  QString error);
 
 private:
     Ui::MainWindow *ui;
@@ -51,12 +57,18 @@ private:
 
     void refreshAll();
     void requestBalance();
-    void requestTransactions();
+
+    void requestTransactionsFirstPage();
+    void requestTransactionsBefore(const QString& beforeCursor);
+    void requestTransactionsAfter(const QString& afterCursor);
+
     void doWithdraw(int amount);
 
     void setBusy(bool busy);
     void updateBalanceUi(const QJsonObject& data);
     void updateTransactionsUi(const QJsonArray& rows);
+    void updateTransactionsNavUi();
+
     void setWithdrawError(const QString& msg);
     void clearWithdrawError();
 
@@ -65,4 +77,17 @@ private:
     // 30s inactivity handling
     void resetIdleTimer();
     QTimer m_idleTimer;
+    static constexpr int TX_PAGE_SIZE = 10;
+    QString m_nextCursor;
+    QString m_prevCursor;
+    int m_txPageIndex = 0; // 0 = newest page, 1 = next older page, ...
+
+    struct TxPageCursors {
+        QString nextCursor;
+        QString prevCursor;
+    };
+    QVector<TxPageCursors> m_txHistory; // stack of pages (page 0,1,2...)
+
+    enum class TxMove { None, First, Next, Prev };
+    TxMove m_lastTxMove = TxMove::None;
 };

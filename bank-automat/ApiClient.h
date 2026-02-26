@@ -20,6 +20,15 @@ public:
     void login(const QString& cardNumber, const QString& pin);
     void getBalance(int accountId);
     void withdraw(int accountId, int amount);
+    // Transactions
+    // First page: call with empty before/after
+    // Next (older): before=<nextCursor>
+    // Prev (newer): after=<prevCursor>
+    void getTransactionsPage(int accountId, int limit = 10,
+                             const QString& before = QString(),
+                             const QString& after  = QString());
+
+    // Backward-compatible helper (first page only)
     void getTransactions(int accountId, int limit = 10);
 
 signals:
@@ -30,6 +39,11 @@ signals:
     void balanceResult(bool ok, QJsonObject data, QString error);
     void withdrawResult(bool ok, QJsonObject data, QString error);
     void transactionsResult(bool ok, QJsonArray data, QString error);
+
+    // New: paginated response { items: [...], nextCursor, prevCursor }
+    void transactionsPageResult(bool ok, QJsonArray items,
+                                QString nextCursor, QString prevCursor,
+                                QString error);
 
 private:
     QNetworkAccessManager m_net;

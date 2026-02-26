@@ -9,6 +9,7 @@
 #include <QTabBar>
 #include <QApplication>
 #include <QEvent>
+#include <QHeaderView>
 
 static constexpr int IDLE_TIMEOUT_MS = 30 * 1000;
 
@@ -26,10 +27,20 @@ MainWindow::MainWindow(ApiClient* api, int accountId, const QString& role, QWidg
 {
     ui->setupUi(this);
 
+    static constexpr int IDLE_TIMEOUT_MS = 30 * 1000;
+    m_idleTimer.setInterval(IDLE_TIMEOUT_MS);
+    m_idleTimer.setSingleShot(true);
+
+    connect(&m_idleTimer, &QTimer::timeout, this, [this]() {
+        emit idleTimeout();
+    });
+
+    // Listen to all app events -> reset timer on any user activity
+    qApp->installEventFilter(this);
+    resetIdleTimer();
+
     const QString roleTxt = m_accountRole.isEmpty() ? QString("debit") : m_accountRole;
     setWindowTitle(QString("Bank Automat - %1 (Account %2)").arg(roleTxt, QString::number(m_accountId)));
-
-    showFullScreen();   // koko ruutu
 
     new QShortcut(QKeySequence(Qt::Key_Escape), this, SLOT(close()));
 
@@ -48,21 +59,8 @@ MainWindow::MainWindow(ApiClient* api, int accountId, const QString& role, QWidg
     connect(m_api, &ApiClient::withdrawResult,
             this, &MainWindow::onWithdrawResult);
 
-    connect(m_api, &ApiClient::transactionsResult,
-            this, &MainWindow::onTransactionsResult);
-
-    // -------------------------
-    // 30s inactivity timer
-    // - Any mouse/keyboard activity resets the timer (eventFilter)
-    // - On timeout -> emit idleTimeout() and let StartWindow reset UI/session
-    // -------------------------
-    m_idleTimer.setInterval(IDLE_TIMEOUT_MS);
-    m_idleTimer.setSingleShot(true);
-    connect(&m_idleTimer, &QTimer::timeout, this, [this]() {
-        emit idleTimeout();
-    });
-    qApp->installEventFilter(this);
-    resetIdleTimer();
+    connect(m_api, &ApiClient::transactionsPageResult,
+            this, &MainWindow::onTransactionsPageResult);
 
     // Initial load
     refreshAll();
@@ -91,17 +89,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     case QEvent::KeyPress:
     case QEvent::KeyRelease:
     case QEvent::InputMethod:
-    case QEvent::TouchBegin:
-    case QEvent::TouchUpdate:
-    case QEvent::TouchEnd:
     case QEvent::FocusIn:
         resetIdleTimer();
         break;
     default:
         break;
     }
-
-    return false; // do not swallow events
+    return false; // don't swallow events
 }
 
 void MainWindow::setBusy(bool busy)
@@ -114,6 +108,9 @@ void MainWindow::setBusy(bool busy)
     ui->withdraw50Button->setEnabled(!busy);
     ui->withdraw100Button->setEnabled(!busy);
     ui->refreshTransactionsButton->setEnabled(!busy);
+
+    if (ui->prevTransactionsButton) ui->prevTransactionsButton->setEnabled(!busy && !m_prevCursor.isEmpty());
+    if (ui->nextTransactionsButton) ui->nextTransactionsButton->setEnabled(!busy && !m_nextCursor.isEmpty());
 
     if (busy) statusBar()->showMessage("Loading...");
     else statusBar()->clearMessage();
@@ -135,7 +132,7 @@ void MainWindow::clearWithdrawError()
 void MainWindow::refreshAll()
 {
     requestBalance();
-    requestTransactions();
+    requestTransactionsFirstPage();
 }
 
 void MainWindow::requestBalance()
@@ -144,10 +141,30 @@ void MainWindow::requestBalance()
     m_api->getBalance(m_accountId);
 }
 
-void MainWindow::requestTransactions()
+void MainWindow::requestTransactionsFirstPage()
 {
     setBusy(true);
-    m_api->getTransactions(m_accountId, 10);
+
+    m_txPageIndex = 0;
+    m_txHistory.clear();
+    m_nextCursor.clear();
+    m_prevCursor.clear();
+    m_lastTxMove = TxMove::First;
+    updateTransactionsNavUi();
+
+    m_api->getTransactionsPage(m_accountId, TX_PAGE_SIZE);
+}
+
+void MainWindow::requestTransactionsBefore(const QString& beforeCursor)
+{
+    setBusy(true);
+    m_api->getTransactionsPage(m_accountId, TX_PAGE_SIZE, beforeCursor, QString());
+}
+
+void MainWindow::requestTransactionsAfter(const QString& afterCursor)
+{
+    setBusy(true);
+    m_api->getTransactionsPage(m_accountId, TX_PAGE_SIZE, QString(), afterCursor);
 }
 
 void MainWindow::doWithdraw(int amount)
@@ -166,7 +183,38 @@ void MainWindow::on_refreshBalanceButton_clicked()
 
 void MainWindow::on_refreshTransactionsButton_clicked()
 {
-    requestTransactions();
+    requestTransactionsFirstPage();
+}
+
+void MainWindow::on_prevTransactionsButton_clicked()
+{
+    if (m_busy) return;
+    if (m_txPageIndex == 0) return;     // <-- prevents "newer than newest" empty page
+    if (m_prevCursor.isEmpty()) return;
+
+    m_txPageIndex -= 1;
+    m_lastTxMove = TxMove::Prev;
+
+    // Restore cursors for the target page (the page we are returning to)
+    if (!m_txHistory.isEmpty()) {
+        const auto target = m_txHistory.takeLast();
+        // We can't set them fully yet (we still need items), but we can restore nextCursor immediately
+        // so Next won't get disabled after returning.
+        m_nextCursor = target.nextCursor;
+        // prevCursor will be set from response (or keep target.prevCursor)
+    }
+
+    requestTransactionsAfter(m_prevCursor);  // newer items
+}
+
+void MainWindow::on_nextTransactionsButton_clicked()
+{
+    if (m_busy || m_nextCursor.isEmpty()) return;
+    m_txHistory.push_back({ m_nextCursor, m_prevCursor }); // save current page state
+    m_txPageIndex += 1;
+    m_lastTxMove = TxMove::Next;
+    // Next = older items
+    requestTransactionsBefore(m_nextCursor);
 }
 
 void MainWindow::on_withdraw20Button_clicked()  { doWithdraw(20); }
@@ -228,12 +276,13 @@ void MainWindow::onWithdrawResult(bool ok, QJsonObject data, QString error)
                              QString("Withdraw successful.\nNew balance: %1%2")
                                  .arg(QLocale().toString(newBalance, 'f', 2), extra));
 
-    // Refresh after withdraw
+    // Refresh after withdraw -> first page so the new tx is visible
     refreshAll();
 }
 
 void MainWindow::onTransactionsResult(bool ok, QJsonArray data, QString error)
 {
+    // kept for compatibility (not connected in current setup)
     setBusy(false);
 
     if (!ok) {
@@ -242,6 +291,64 @@ void MainWindow::onTransactionsResult(bool ok, QJsonArray data, QString error)
     }
 
     updateTransactionsUi(data);
+}
+
+void MainWindow::onTransactionsPageResult(bool ok, QJsonArray items,
+                                         QString nextCursor, QString prevCursor,
+                                         QString error)
+{
+    setBusy(false);
+
+    if (!ok) {
+        QMessageBox::warning(this, "Transactions", error.isEmpty() ? "Failed to load transactions." : error);
+        updateTransactionsNavUi();
+        return;
+    }
+
+    // If API returns an empty page, don't wipe the table or break pagination state.
+    // Also revert page index move:
+    if (items.isEmpty()) {
+        QMessageBox::information(this, "Transactions", "No more transactions in that direction.");
+        // Undo last move (best-effort): if user pressed Next we already incremented; if Prev we decremented.
+        // We can detect by cursors: simplest is just clamp
+        if (m_txPageIndex < 0) m_txPageIndex = 0;
+        updateTransactionsNavUi();
+        return;
+    }
+
+    // Only overwrite nextCursor if server gave one.
+    // This prevents "Next" becoming disabled after returning with Prev.
+    if (!nextCursor.isEmpty()) {
+        m_nextCursor = nextCursor;
+    }
+    // prevCursor can always be overwritten
+    m_prevCursor = prevCursor;
+
+    // nextCursor handling:
+    // - If we moved NEXT (older) or FIRST page: trust server, even if empty -> disables Next at end
+    // - If we moved PREV (newer): server may not provide a meaningful nextCursor for "older" direction,
+    //   so keep whatever we restored from history unless server gives a non-empty value.
+    if (m_lastTxMove == TxMove::Prev) {
+        if (!nextCursor.isEmpty()) {
+            m_nextCursor = nextCursor;
+        }
+    } else {
+        // First/Next/None: overwrite even if empty
+        m_nextCursor = nextCursor;
+    }
+
+    m_lastTxMove = TxMove::None;
+    updateTransactionsUi(items);
+    updateTransactionsNavUi();
+}
+
+void MainWindow::updateTransactionsNavUi()
+{
+    const bool canPrev = (!m_busy) && (m_txPageIndex > 0) && (!m_prevCursor.isEmpty());
+    const bool canNext = (!m_busy) && (!m_nextCursor.isEmpty());
+
+    if (ui->prevTransactionsButton) ui->prevTransactionsButton->setEnabled(canPrev);
+    if (ui->nextTransactionsButton) ui->nextTransactionsButton->setEnabled(canNext);
 }
 
 // -------- UI update helpers --------
@@ -261,6 +368,8 @@ void MainWindow::updateTransactionsUi(const QJsonArray &rows)
 {
     ui->transactionsTable->setRowCount(0);
 
+    const int startNumber = (m_txPageIndex * TX_PAGE_SIZE) + 1;
+
     for (int i = 0; i < rows.size(); ++i) {
         const QJsonObject obj = rows[i].toObject();
         const QString createdAt = obj.value("created_at").toString();
@@ -279,6 +388,11 @@ void MainWindow::updateTransactionsUi(const QJsonArray &rows)
         ui->transactionsTable->setItem(i, 0, new QTableWidgetItem(dateText));
         ui->transactionsTable->setItem(i, 1, new QTableWidgetItem(txType));
         ui->transactionsTable->setItem(i, 2, new QTableWidgetItem(amount));
+
+        // Set running row number in the vertical header: 1-10, 11-20, ...
+        ui->transactionsTable->setVerticalHeaderItem(
+            i, new QTableWidgetItem(QString::number(startNumber + i))
+        );
     }
 
     ui->transactionsTable->resizeColumnsToContents();

@@ -169,7 +169,7 @@ void ApiClient::login(const QString &cardNumber, const QString &pin)
                 return;
             }
 
-            // 403: card locked (DB status or runtime lock)
+            // 403: card locked
             if (httpStatus == 403) {
                 QString msg = error.isEmpty() ? QStringLiteral("Card locked") : error;
                 if (msg.contains("liian monta yritystä", Qt::CaseInsensitive)) {
@@ -291,19 +291,56 @@ void ApiClient::withdraw(int accountId, int amount)
 
 void ApiClient::getTransactions(int accountId, int limit)
 {
-    // Backend supports ?limit=10
+    // Backward-compatible: first page
+    getTransactionsPage(accountId, limit, QString(), QString());
+}
+
+void ApiClient::getTransactionsPage(int accountId, int limit,
+                                    const QString& before,
+                                    const QString& after)
+{
     const int safeLimit = (limit <= 0) ? 10 : (limit > 100 ? 100 : limit);
 
-    getJson(QString("/accounts/%1/transactions?limit=%2").arg(accountId).arg(safeLimit),
-            [this](bool ok, int /*status*/, QJsonDocument json, QString error) {
+    QString path = QString("/accounts/%1/transactions?limit=%2")
+                       .arg(accountId)
+                       .arg(safeLimit);
+
+    if (!before.isEmpty()) {
+        path += QString("&before=%1").arg(QString(QUrl::toPercentEncoding(before)));
+    }
+    if (!after.isEmpty()) {
+        path += QString("&after=%1").arg(QString(QUrl::toPercentEncoding(after)));
+    }
+
+    getJson(path, [this](bool ok, int /*status*/, QJsonDocument json, QString error) {
         if (!ok) {
-            emit transactionsResult(false, QJsonArray(), error.isEmpty() ? "Failed to load transactions" : error);
+            const QString msg = error.isEmpty() ? "Failed to load transactions" : error;
+            emit transactionsPageResult(false, QJsonArray(), QString(), QString(), msg);
+            emit transactionsResult(false, QJsonArray(), msg);
             return;
         }
-        if (!json.isArray()) {
-            emit transactionsResult(false, QJsonArray(), "Invalid response from server");
+
+        // Accept both old (array) and new (object) response shapes
+        if (json.isArray()) {
+            const QJsonArray arr = json.array();
+            emit transactionsPageResult(true, arr, QString(), QString(), QString());
+            emit transactionsResult(true, arr, QString());
             return;
         }
-        emit transactionsResult(true, json.array(), QString());
+
+        if (!json.isObject()) {
+            const QString msg = "Invalid response from server";
+            emit transactionsPageResult(false, QJsonArray(), QString(), QString(), msg);
+            emit transactionsResult(false, QJsonArray(), msg);
+            return;
+        }
+
+        const QJsonObject obj = json.object();
+        const QJsonArray items = obj.value("items").toArray();
+        const QString nextCursor = obj.value("nextCursor").toString();
+        const QString prevCursor = obj.value("prevCursor").toString();
+
+        emit transactionsPageResult(true, items, nextCursor, prevCursor, QString());
+        emit transactionsResult(true, items, QString());
     });
 }

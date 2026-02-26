@@ -17,10 +17,10 @@
    <widget class="QTabWidget" name="tabWidget">
     <property name="geometry">
      <rect>
-      <x>1140</x>
-      <y>490</y>
+      <x>1080</x>
+      <y>390</y>
       <width>361</width>
-      <height>321</height>
+      <height>501</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -154,6 +154,20 @@
           <string>Amount</string>
          </property>
         </column>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="prevTransactionsButton">
+        <property name="text">
+         <string>Previous</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="nextTransactionsButton">
+        <property name="text">
+         <string>Next</string>
+        </property>
        </widget>
       </item>
       <item>
