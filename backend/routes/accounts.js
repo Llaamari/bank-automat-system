@@ -61,6 +61,9 @@ router.post('/:id/withdraw', async (req, res) => {
   if (!Number.isInteger(accountId) || accountId <= 0) {
     return res.status(400).json({ error: 'Invalid account id' });
   }
+  if (!Number.isFinite(amount) || !Number.isInteger(amount)) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
   if (!allowed.has(amount)) {
     return res.status(400).json({ error: 'Invalid amount (allowed: 20,40,50,100)' });
   }
@@ -69,9 +72,11 @@ router.post('/:id/withdraw', async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Lock the account row for update
+    // Lock the account row for update + read needed fields
     const [rows] = await conn.execute(
-      `SELECT balance FROM accounts WHERE id = ? FOR UPDATE`,
+      `SELECT balance, account_type, credit_limit
+       FROM accounts
+       WHERE id = ? FOR UPDATE`,
       [accountId]
     );
     if (rows.length === 0) {
@@ -80,12 +85,26 @@ router.post('/:id/withdraw', async (req, res) => {
     }
 
     const balance = Number(rows[0].balance);
-    if (balance < amount) {
-      await conn.rollback();
-      return res.status(400).json({ error: 'Insufficient funds' });
-    }
+    const accountType = String(rows[0].account_type ?? 'debit');
+    const creditLimit = Number(rows[0].credit_limit ?? 0);
 
     const newBalance = balance - amount;
+
+    if (accountType === 'debit') {
+      if (balance < amount) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Insufficient funds' });
+      }
+    } else if (accountType === 'credit') {
+      // allow negative down to -creditLimit
+      if (newBalance < -creditLimit) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Credit limit exceeded' });
+      }
+    } else {
+      await conn.rollback();
+      return res.status(500).json({ error: 'Invalid account type' });
+    }
 
     await conn.execute(
       `UPDATE accounts SET balance = ? WHERE id = ?`,
