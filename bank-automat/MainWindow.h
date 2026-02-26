@@ -3,6 +3,8 @@
 #include <QMainWindow>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QTimer>
+#include <QEvent>
 
 class ApiClient;
 
@@ -18,6 +20,13 @@ public:
     explicit MainWindow(ApiClient* api, int accountId, QWidget *parent = nullptr);
     explicit MainWindow(ApiClient* api, int accountId, const QString& role, QWidget *parent = nullptr);
     ~MainWindow();
+
+signals:
+    // Emitted after 30 seconds of inactivity. StartWindow should handle returning to start.
+    void idleTimeout();
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     // UI events
@@ -52,4 +61,8 @@ private:
     void clearWithdrawError();
 
     bool m_busy = false;
+
+    // 30s inactivity handling
+    void resetIdleTimer();
+    QTimer m_idleTimer;
 };

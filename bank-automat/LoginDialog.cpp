@@ -7,7 +7,7 @@
 #include <QWidget>
 #include <QLineEdit>
 
-static constexpr int PIN_TIMEOUT_MS = 10 * 1000;
+static constexpr int PIN_TIMEOUT_MS = 30 * 1000;
 
 LoginDialog::LoginDialog(ApiClient* api, QWidget *parent)
     : QDialog(parent),
@@ -41,7 +41,7 @@ LoginDialog::LoginDialog(ApiClient* api, QWidget *parent)
         w->installEventFilter(this);
     }
 
-    // --- PIN syötön aikaraja (10 s) ---
+    // --- Inactivity timeout (30 s) ---
     m_timeoutTimer.setInterval(PIN_TIMEOUT_MS);
     m_timeoutTimer.setSingleShot(true);
     connect(&m_timeoutTimer, &QTimer::timeout, this, &LoginDialog::onTimeout);
@@ -203,7 +203,7 @@ void LoginDialog::onTimeout()
     m_timeoutTimer.stop();
     m_loginInProgress = false;
 
-    // 10 s ilman riittävää toimintaa -> takaisin aloitusnäyttöön
+    // 30 s ilman riittävää toimintaa -> takaisin aloitusnäyttöön
     ui->pinLineEdit->clear();
     ui->cardNumberLineEdit->clear();
     ui->errorLabel->clear();

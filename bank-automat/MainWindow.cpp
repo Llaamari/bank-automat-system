@@ -7,6 +7,10 @@
 #include <QLocale>
 #include <QShortcut>
 #include <QTabBar>
+#include <QApplication>
+#include <QEvent>
+
+static constexpr int IDLE_TIMEOUT_MS = 30 * 1000;
 
 MainWindow::MainWindow(ApiClient* api, int accountId, QWidget *parent)
     : MainWindow(api, accountId, QStringLiteral("debit"), parent)
@@ -47,13 +51,57 @@ MainWindow::MainWindow(ApiClient* api, int accountId, const QString& role, QWidg
     connect(m_api, &ApiClient::transactionsResult,
             this, &MainWindow::onTransactionsResult);
 
+    // -------------------------
+    // 30s inactivity timer
+    // - Any mouse/keyboard activity resets the timer (eventFilter)
+    // - On timeout -> emit idleTimeout() and let StartWindow reset UI/session
+    // -------------------------
+    m_idleTimer.setInterval(IDLE_TIMEOUT_MS);
+    m_idleTimer.setSingleShot(true);
+    connect(&m_idleTimer, &QTimer::timeout, this, [this]() {
+        emit idleTimeout();
+    });
+    qApp->installEventFilter(this);
+    resetIdleTimer();
+
     // Initial load
     refreshAll();
 }
 
 MainWindow::~MainWindow()
 {
+    qApp->removeEventFilter(this);
     delete ui;
+}
+
+void MainWindow::resetIdleTimer()
+{
+    m_idleTimer.start();
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    Q_UNUSED(obj);
+
+    switch (event->type()) {
+    case QEvent::MouseMove:
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+    case QEvent::Wheel:
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+    case QEvent::InputMethod:
+    case QEvent::TouchBegin:
+    case QEvent::TouchUpdate:
+    case QEvent::TouchEnd:
+    case QEvent::FocusIn:
+        resetIdleTimer();
+        break;
+    default:
+        break;
+    }
+
+    return false; // do not swallow events
 }
 
 void MainWindow::setBusy(bool busy)

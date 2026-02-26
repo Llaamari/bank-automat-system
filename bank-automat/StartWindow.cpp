@@ -8,6 +8,9 @@
 #include <QKeySequence>
 #include <QTimer>
 
+static constexpr int HANDOFF_POLL_MS = 15;
+static constexpr int HANDOFF_MAX_MS  = 1500;
+
 StartWindow::StartWindow(ApiClient* api, QWidget *parent)
     : QWidget(parent),
       ui(new Ui::StartWindow),
@@ -26,6 +29,28 @@ StartWindow::~StartWindow()
     delete ui;
 }
 
+void StartWindow::forceResetToStart()
+{
+    // Bring StartWindow up FIRST (cover desktop)
+    this->showFullScreen();
+    this->raise();
+    this->activateWindow();
+    if (ui && ui->startButton) ui->startButton->setFocus();
+
+    // Then close MainWindow slightly later (avoid desktop flash)
+    if (m_mainWindow) {
+        MainWindow* toClose = m_mainWindow;
+        m_mainWindow = nullptr;
+
+        QTimer::singleShot(50, this, [toClose]() {
+            if (toClose) {
+                toClose->close();
+                toClose->deleteLater();
+            }
+        });
+    }
+}
+
 void StartWindow::on_startButton_clicked()
 {
     LoginDialog dlg(m_api, this);
@@ -34,19 +59,54 @@ void StartWindow::on_startButton_clicked()
         const int accountId = dlg.accountId();
         const QString role = dlg.accountRole();
 
-        // Käytä uutta MainWindow-konstruktoria (accountId + role)
-        auto *mw = new MainWindow(m_api, accountId, role);
-        mw->show(); // MainWindow itse hoitaa showFullScreen() konstruktorissa
+        // Create + show MainWindow first. Keep StartWindow visible until
+        // MainWindow becomes the active top-level window to avoid a brief
+        // desktop "flash" when the modal dialog closes.
+        m_mainWindow = new MainWindow(m_api, accountId, role);
 
-        // Sulje StartWindow vasta seuraavalla event loop -kierroksella
-        QTimer::singleShot(50, this, [this]() { this->close(); });
+        // If MainWindow emits inactivity timeout, return to start
+        QObject::connect(m_mainWindow, SIGNAL(idleTimeout()), this, SLOT(forceResetToStart()));
+
+        // If user closes MainWindow manually, return to start
+        connect(m_mainWindow, &QObject::destroyed, this, [this]() {
+            m_mainWindow = nullptr;
+        });
+
+        m_mainWindow->showFullScreen();
+        m_mainWindow->raise();
+        m_mainWindow->activateWindow();
+
+        // Poll until MainWindow is active, then hide StartWindow.
+        auto *handoffTimer = new QTimer(this);
+        handoffTimer->setInterval(HANDOFF_POLL_MS);
+        handoffTimer->setSingleShot(false);
+
+        QTimer::singleShot(HANDOFF_MAX_MS, handoffTimer, [handoffTimer]() {
+            if (handoffTimer) handoffTimer->stop();
+        });
+
+        connect(handoffTimer, &QTimer::timeout, this, [this, handoffTimer]() {
+            if (!m_mainWindow) {
+                handoffTimer->stop();
+                handoffTimer->deleteLater();
+                return;
+            }
+
+            m_mainWindow->raise();
+            m_mainWindow->activateWindow();
+
+            if (m_mainWindow->isVisible() && m_mainWindow->isActiveWindow()) {
+                this->hide();
+                handoffTimer->stop();
+                handoffTimer->deleteLater();
+            }
+        });
+
+        handoffTimer->start();
     } else {
-        // Timeout / cancel: ensure StartWindow is focused and ready
-        this->show();
+        this->showFullScreen();
         this->raise();
         this->activateWindow();
-        if (ui && ui->startButton) {
-            ui->startButton->setFocus();
-        }
+        if (ui && ui->startButton) ui->startButton->setFocus();
     }
 }
