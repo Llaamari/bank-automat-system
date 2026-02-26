@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS cards (
   pin_hash     VARCHAR(100) NOT NULL,
   status       ENUM('active','locked') NOT NULL DEFAULT 'active',
   failed_pin_attempts INT NOT NULL DEFAULT 0,
+  locked_at    DATETIME NULL,
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT fk_cards_customer
@@ -148,6 +149,20 @@ SET @col_exists := (
 );
 SET @sql := IF(@col_exists = 0,
   'ALTER TABLE cards ADD COLUMN failed_pin_attempts INT NOT NULL DEFAULT 0 AFTER status',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- cards.locked_at
+SET @col_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'cards'
+    AND COLUMN_NAME = 'locked_at'
+);
+SET @sql := IF(@col_exists = 0,
+  'ALTER TABLE cards ADD COLUMN locked_at DATETIME NULL AFTER failed_pin_attempts',
   'SELECT 1'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
