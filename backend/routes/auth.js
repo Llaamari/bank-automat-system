@@ -4,7 +4,7 @@ const router = express.Router();
 const db = require('../db');
 
 // POST /auth/login
-// body: { "cardId": 1, "pin": "1234" }
+// body: { "cardNumber": "12345678", "pin": "1234" }
 router.post('/login', async (req, res) => {
   const cardNumber = String(req.body.cardNumber ?? '').trim();
   const pin = String(req.body.pin ?? '');
@@ -37,23 +37,23 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ ok: false });
     }
 
-    // Hae tilin ID card_accounts-taulusta
+    // Hae kaikki linkitetyt tilit (debit/credit) card_accounts-taulusta
     const [links] = await db.execute(
-  `SELECT account_id
-   FROM card_accounts
-   WHERE card_id = ? AND role = 'debit'
-   LIMIT 1`,
-  [cardId]
-  );
+      `SELECT account_id, role
+       FROM card_accounts
+       WHERE card_id = ?
+       ORDER BY role ASC`,
+      [cardId]
+    );
 
     if (links.length === 0) {
-      return res.status(500).json({ error: 'Card has no linked account' });
+      return res.status(500).json({ error: 'Card has no linked accounts' });
     }
 
-    // Palauta accountId
+    // Palauta roolit ja accountId:t
     res.json({
       ok: true,
-      accountId: links[0].account_id
+      accounts: links.map(l => ({ role: l.role, accountId: l.account_id }))
     });
 
   } catch (err) {

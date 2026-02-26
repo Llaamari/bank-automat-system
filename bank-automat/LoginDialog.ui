@@ -16,10 +16,10 @@
   <widget class="QWidget" name="widget" native="true">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>50</y>
-     <width>211</width>
-     <height>191</height>
+     <x>70</x>
+     <y>30</y>
+     <width>271</width>
+     <height>241</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -97,6 +97,16 @@
        <bool>true</bool>
       </property>
      </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="roleLabel">
+      <property name="text">
+       <string>Account type</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="roleComboBox"/>
     </item>
    </layout>
   </widget>

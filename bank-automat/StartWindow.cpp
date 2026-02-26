@@ -32,9 +32,11 @@ void StartWindow::on_startButton_clicked()
 
     if (dlg.exec() == QDialog::Accepted) {
         const int accountId = dlg.accountId();
+        const QString role = dlg.accountRole();
 
-        auto *mw = new MainWindow(m_api, accountId);
-        mw->showFullScreen();
+        // Käytä uutta MainWindow-konstruktoria (accountId + role)
+        auto *mw = new MainWindow(m_api, accountId, role);
+        mw->show(); // MainWindow itse hoitaa showFullScreen() konstruktorissa
 
         // Sulje StartWindow vasta seuraavalla event loop -kierroksella
         QTimer::singleShot(50, this, [this]() { this->close(); });

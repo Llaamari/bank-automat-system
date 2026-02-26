@@ -9,13 +9,21 @@
 #include <QTabBar>
 
 MainWindow::MainWindow(ApiClient* api, int accountId, QWidget *parent)
+    : MainWindow(api, accountId, QStringLiteral("debit"), parent)
+{
+}
+
+MainWindow::MainWindow(ApiClient* api, int accountId, const QString& role, QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
       m_api(api),
-      m_accountId(accountId)
+      m_accountId(accountId),
+      m_accountRole(role)
 {
     ui->setupUi(this);
-    setWindowTitle(QString("Bank Automat - Account %1").arg(m_accountId));
+
+    const QString roleTxt = m_accountRole.isEmpty() ? QString("debit") : m_accountRole;
+    setWindowTitle(QString("Bank Automat - %1 (Account %2)").arg(roleTxt, QString::number(m_accountId)));
 
     showFullScreen();   // koko ruutu
 
@@ -59,11 +67,8 @@ void MainWindow::setBusy(bool busy)
     ui->withdraw100Button->setEnabled(!busy);
     ui->refreshTransactionsButton->setEnabled(!busy);
 
-    if (busy) {
-        statusBar()->showMessage("Loading...");
-    } else {
-        statusBar()->clearMessage();
-    }
+    if (busy) statusBar()->showMessage("Loading...");
+    else statusBar()->clearMessage();
 }
 
 void MainWindow::refreshAll()
@@ -159,7 +164,9 @@ void MainWindow::updateBalanceUi(const QJsonObject &data)
     const QString balanceStr = data.value("balance").toVariant().toString();
     const QString typeStr = data.value("account_type").toString("debit");
 
-    ui->balanceLabel->setText(QString("Balance: %1 € (%2)").arg(balanceStr, typeStr));
+    const QString modeStr = m_accountRole.isEmpty() ? QString("debit") : m_accountRole;
+    ui->balanceLabel->setText(QString("Mode: %1 | Balance: %2 € (%3)")
+                                  .arg(modeStr, balanceStr, typeStr));
 }
 
 void MainWindow::updateTransactionsUi(const QJsonArray &rows)
@@ -178,12 +185,8 @@ void MainWindow::updateTransactionsUi(const QJsonArray &rows)
         QString dateText = createdAt;
         // If backend returns "YYYY-MM-DDTHH:MM:SS..." or "YYYY-MM-DD HH:MM:SS"
         QDateTime dt = QDateTime::fromString(createdAt, Qt::ISODate);
-        if (!dt.isValid()) {
-            dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss");
-        }
-        if (dt.isValid()) {
-            dateText = QLocale().toString(dt, QLocale::ShortFormat);
-        }
+        if (!dt.isValid()) dt = QDateTime::fromString(createdAt, "yyyy-MM-dd HH:mm:ss");
+        if (dt.isValid()) dateText = QLocale().toString(dt, QLocale::ShortFormat);
 
         ui->transactionsTable->setItem(i, 0, new QTableWidgetItem(dateText));
         ui->transactionsTable->setItem(i, 1, new QTableWidgetItem(txType));

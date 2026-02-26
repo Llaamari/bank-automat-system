@@ -16,6 +16,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(ApiClient* api, int accountId, QWidget *parent = nullptr);
+    explicit MainWindow(ApiClient* api, int accountId, const QString& role, QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -36,6 +37,7 @@ private:
     Ui::MainWindow *ui;
     ApiClient* m_api = nullptr;
     int m_accountId = -1;
+    QString m_accountRole = "debit";
 
     void refreshAll();
     void requestBalance();

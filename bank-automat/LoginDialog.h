@@ -4,6 +4,8 @@
 #include <QEvent>
 #include <QTimer>
 #include <QShowEvent>
+#include <QJsonArray>
+#include <QString>
 
 class ApiClient;
 
@@ -20,6 +22,7 @@ public:
     ~LoginDialog();
 
     int accountId() const;
+    QString accountRole() const;
 
 protected:
     // Reset inactivity timer on any user activity inside the dialog
@@ -30,14 +33,20 @@ protected:
 private slots:
     void on_loginButton_clicked();
     void on_cancelButton_clicked();
-    void onLoginResult(bool ok, int accountId, QString error);
+    void onLoginResult(bool ok, QJsonArray accounts, QString error);
     void onTimeout();
     void resetTimeout();
 
 private:
     Ui::LoginDialog *ui;
     ApiClient* m_api = nullptr;
+
     int m_accountId = -1;
+    QString m_accountRole = "debit";
+
+    QJsonArray m_accounts;
+    bool m_waitingRoleSelection = false;
+
     QTimer m_timeoutTimer;
     bool m_loginInProgress = false;
 };
