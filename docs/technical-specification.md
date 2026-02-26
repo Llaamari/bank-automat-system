@@ -342,3 +342,212 @@ During the demo, the following will be shown:
   - UI fields are cleared
   - Login button state is restored
   - Dialog closes via `reject()`
+
+## 13. Grade 4 Features (Advanced Functionality)
+
+### Persistent Card Lock (Database-Level Security)
+
+#### Overview
+
+The system implements a **persistent card lock mechanism**.
+
+If a user enters an incorrect PIN **three consecutive times**, the card is permanently locked in the database.
+
+The lock state persists even if the backend server is restarted.
+
+#### Database Behavior
+
+The `cards` table includes the following fields:
+
+- `failed_pin_attempts INT NOT NULL DEFAULT 0`
+- `status ENUM('active','locked')`
+- `locked_at DATETIME NULL`
+
+#### Locking Logic
+
+1. On each failed login attempt:
+   - `failed_pin_attempts` is incremented.
+2. When `failed_pin_attempts >= 3`:
+   - `status` is set to `'locked'`
+   - `locked_at` is set to the current timestamp.
+3. On successful login:
+   - `failed_pin_attempts` is reset to `0`.
+
+If a locked card attempts login:
+
+```json
+HTTP 403
+{
+  "error": "Card locked"
+}
+```
+
+#### Persistence
+
+Because the lock status is stored in MySQL:
+
+- Restarting the backend does NOT unlock the card.
+- The card must be manually unlocked in the database (admin/dev use).
+
+### 30-Second Global Inactivity Timeout (ATM Security)
+
+#### Overview
+
+A 30-second inactivity timeout has been implemented in the main application window (`MainWindow`).
+
+If no user interaction occurs within 30 seconds:
+
+1. The session is terminated
+2. `MainWindow` is closed
+3. The application returns to `StartWindow`
+
+This simulates real ATM behavior and prevents unauthorized access.
+
+#### How Inactivity Is Measured
+
+The application installs a global `eventFilter` on the Qt application.
+
+The timer resets on:
+
+- Mouse movement
+- Mouse clicks
+- Keyboard input
+- Focus changes
+- Touch events
+
+Implementation details:
+
+- `QTimer` (30,000 ms, singleShot)
+- `qApp->installEventFilter(this)`
+- `resetIdleTimer()` called on user activity
+- On timeout → `emit idleTimeout()`
+- `StartWindow` listens and performs safe reset
+
+#### Behavior on Timeout
+
+When the timer expires:
+
+- `StartWindow` is shown fullscreen
+- `MainWindow` is safely closed
+- Session state (accountId) is cleared
+
+### Transaction Pagination (10 per Page)
+
+#### Overview
+
+Transactions are retrieved using **cursor-based pagination**.
+
+- Default order: newest → oldest
+- Page size: 10 transactions
+- Supports forward (older) and backward (newer) navigation
+
+#### API Endpoint
+
+```
+GET /accounts/:id/transactions
+```
+
+#### Query Parameters
+
+| Parameter | Description |
+|-----------|------------|
+| `limit`   | Number of transactions (default 10) |
+| `before`  | Cursor for older transactions |
+| `after`   | Cursor for newer transactions |
+
+#### Cursor Format
+
+```
+<epochMilliseconds>|<transactionId>
+```
+
+Example:
+
+```
+1772149218000|7
+```
+
+Using epoch time ensures correct ordering even if multiple transactions share the same timestamp.
+
+#### Example cURL – First Page (Newest)
+
+```bash
+curl "http://localhost:3000/accounts/1/transactions?limit=10"
+```
+
+Response:
+
+```json
+{
+  "items": [...],
+  "nextCursor": "1772149218000|7",
+  "prevCursor": null
+}
+```
+
+#### Example cURL – Next Page (Older Transactions)
+
+```bash
+curl "http://localhost:3000/accounts/1/transactions?limit=10&before=1772149218000%7C7"
+```
+
+#### Example cURL – Previous Page (Newer Transactions)
+
+```bash
+curl "http://localhost:3000/accounts/1/transactions?limit=10&after=1772149218000%7C7"
+```
+
+#### Qt UI Behavior
+
+In the Transactions tab:
+
+- **Next** → fetches older transactions (`before=nextCursor`)
+- **Previous** → fetches newer transactions (`after=prevCursor`)
+- Buttons automatically disable:
+  - Next is disabled on the last page
+  - Previous is disabled on the newest page
+- Row numbers are shown as continuous numbering:
+  - Page 1: 1–10
+  - Page 2: 11–20
+  - etc.
+
+After a withdrawal:
+
+- The system refreshes to the first page
+- The newest transaction becomes immediately visible
+
+### Testing Instructions (Grade 4 Features)
+
+#### Persistent Card Lock
+
+1. Enter incorrect PIN three times.
+2. Observe HTTP 403 response.
+3. Restart backend.
+4. Attempt login with correct PIN.
+
+Expected result:  
+Card remains locked.
+
+#### 30-Second Inactivity
+
+1. Login successfully.
+2. Do not interact with the application.
+3. Wait 30 seconds.
+
+Expected result:  
+Application returns to `StartWindow` automatically.
+
+#### Transaction Pagination
+
+1. Login.
+2. Open Transactions tab.
+3. Press **Next** → older transactions appear.
+4. Press **Previous** → return to newer transactions.
+5. Continue pressing Next until last page.
+
+Expected result:  
+Next button becomes disabled on final page.
+
+6. Perform a withdrawal.
+7. Transactions reset to first page.
+8. New transaction appears at top.
