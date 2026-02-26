@@ -66,11 +66,17 @@ void ApiClient::postJson(const QString &path,
 
         // Network-level error
         if (reply->error() != QNetworkReply::NoError) {
-            const QString err = reply->errorString();
-            reply->deleteLater();
-            cb(false, status, json, err);
-            return;
+        QString err = reply->errorString();
+
+        if (parseErr.error == QJsonParseError::NoError) {
+            // If backend returned { error: "..." }, show that instead of "Bad Request"
+            err = ApiClient::extractErrorMessage(json, err);
         }
+
+        reply->deleteLater();
+        cb(false, status, json, err);
+        return;
+    }
 
         // HTTP error
         if (status < 200 || status >= 300) {
@@ -104,11 +110,14 @@ void ApiClient::getJson(const QString &path,
         const QJsonDocument json = QJsonDocument::fromJson(raw, &parseErr);
 
         if (reply->error() != QNetworkReply::NoError) {
-            const QString err = reply->errorString();
-            reply->deleteLater();
-            cb(false, status, json, err);
-            return;
+        QString err = reply->errorString();
+        if (parseErr.error == QJsonParseError::NoError) {
+            err = ApiClient::extractErrorMessage(json, err);
         }
+        reply->deleteLater();
+        cb(false, status, json, err);
+        return;
+    }
 
         if (status < 200 || status >= 300) {
             const QString err = (parseErr.error == QJsonParseError::NoError)

@@ -19,8 +19,8 @@
      <rect>
       <x>1140</x>
       <y>490</y>
-      <width>331</width>
-      <height>291</height>
+      <width>361</width>
+      <height>321</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -107,6 +107,26 @@
        <widget class="QPushButton" name="withdraw100Button">
         <property name="text">
          <string>100</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="customAmountLineEdit"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="customWithdrawButton">
+        <property name="text">
+         <string>Raise</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="withdrawErrorLabel">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

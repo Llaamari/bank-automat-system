@@ -71,6 +71,19 @@ void MainWindow::setBusy(bool busy)
     else statusBar()->clearMessage();
 }
 
+void MainWindow::setWithdrawError(const QString& msg)
+{
+    if (!ui->withdrawErrorLabel) return;
+    ui->withdrawErrorLabel->setText(msg);
+    ui->withdrawErrorLabel->setVisible(!msg.trimmed().isEmpty());
+    ui->withdrawErrorLabel->setStyleSheet("color: red;");
+}
+
+void MainWindow::clearWithdrawError()
+{
+    setWithdrawError("");
+}
+
 void MainWindow::refreshAll()
 {
     requestBalance();
@@ -91,6 +104,7 @@ void MainWindow::requestTransactions()
 
 void MainWindow::doWithdraw(int amount)
 {
+    clearWithdrawError();
     setBusy(true);
     m_api->withdraw(m_accountId, amount);
 }
@@ -112,6 +126,19 @@ void MainWindow::on_withdraw40Button_clicked()  { doWithdraw(40); }
 void MainWindow::on_withdraw50Button_clicked()  { doWithdraw(50); }
 void MainWindow::on_withdraw100Button_clicked() { doWithdraw(100); }
 
+void MainWindow::on_customWithdrawButton_clicked()
+{
+    bool ok = false;
+    const int amount = ui->customAmountLineEdit->text().trimmed().toInt(&ok);
+
+    if (!ok || amount <= 0) {
+        QMessageBox::warning(this, "Withdraw", "Enter a positive whole number.");
+        return;
+    }
+
+    doWithdraw(amount); // käyttää samaa backend endpointtia
+}
+
 // -------- API result slots --------
 
 void MainWindow::onBalanceResult(bool ok, QJsonObject data, QString error)
@@ -131,14 +158,27 @@ void MainWindow::onWithdrawResult(bool ok, QJsonObject data, QString error)
     setBusy(false);
 
     if (!ok) {
-        QMessageBox::warning(this, "Withdraw", error.isEmpty() ? "Withdraw failed." : error);
+        // Näytä withdraw-tabin virheet labelissa
+        setWithdrawError(error.isEmpty() ? "Withdraw failed." : error);
         return;
     }
 
+    clearWithdrawError();
+
     // Optional success info:
     const double newBalance = data.value("balance").toDouble();
-    QMessageBox::information(this, "Withdraw", QString("Withdraw successful.\nNew balance: %1")
-                                            .arg(QLocale().toString(newBalance, 'f', 2)));
+    QString extra;
+
+    if (data.contains("bills") && data.value("bills").isObject()) {
+        const QJsonObject bills = data.value("bills").toObject();
+        const int f = bills.value("50").toInt(0);
+        const int t = bills.value("20").toInt(0);
+        extra = QString("\nBills: 50€ x %1, 20€ x %2").arg(f).arg(t);
+    }
+
+    QMessageBox::information(this, "Withdraw",
+                             QString("Withdraw successful.\nNew balance: %1%2")
+                                 .arg(QLocale().toString(newBalance, 'f', 2), extra));
 
     // Refresh after withdraw
     refreshAll();

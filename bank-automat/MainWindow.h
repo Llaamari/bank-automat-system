@@ -27,6 +27,7 @@ private slots:
     void on_withdraw50Button_clicked();
     void on_withdraw100Button_clicked();
     void on_refreshTransactionsButton_clicked();
+    void on_customWithdrawButton_clicked();
 
     // API results
     void onBalanceResult(bool ok, QJsonObject data, QString error);
@@ -47,6 +48,8 @@ private:
     void setBusy(bool busy);
     void updateBalanceUi(const QJsonObject& data);
     void updateTransactionsUi(const QJsonArray& rows);
+    void setWithdrawError(const QString& msg);
+    void clearWithdrawError();
 
     bool m_busy = false;
 };

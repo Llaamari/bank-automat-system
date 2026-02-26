@@ -2,6 +2,28 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+/**
+ * Compute ATM bill breakdown using only 20€ and 50€ bills.
+ * Prefer more 50€ bills (typical ATM behavior).
+ * @param {number} amount
+ * @returns {{ok:true, bills: {"50": number, "20": number}} | {ok:false}}
+ */
+function computeBills(amount) {
+  // returns { ok: true, bills: { "50": x, "20": y } } or { ok:false }
+  if (!Number.isInteger(amount) || amount <= 0) return { ok: false };
+  if (amount % 10 !== 0) return { ok: false }; // quick reject
+
+  // Prefer more 50s (typical ATM behavior), but any valid combo is fine.
+  for (let fifties = Math.floor(amount / 50); fifties >= 0; fifties--) {
+    const rest = amount - 50 * fifties;
+    if (rest >= 0 && rest % 20 === 0) {
+      const twenties = rest / 20;
+      return { ok: true, bills: { "50": fifties, "20": twenties } };
+    }
+  }
+  return { ok: false };
+}
+
 router.get('/:id/transactions', async (req, res) => {
   const accountId = Number(req.params.id);
   const limit = Number(req.query.limit ?? 10);
@@ -57,15 +79,19 @@ router.post('/:id/withdraw', async (req, res) => {
   const accountId = Number(req.params.id);
   const amount = Number(req.body.amount);
 
-  const allowed = new Set([20, 40, 50, 100]);
   if (!Number.isInteger(accountId) || accountId <= 0) {
     return res.status(400).json({ error: 'Invalid account id' });
   }
-  if (!Number.isFinite(amount) || !Number.isInteger(amount)) {
+
+  // Basic validation: positive whole number
+  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Invalid amount' });
   }
-  if (!allowed.has(amount)) {
-    return res.status(400).json({ error: 'Invalid amount (allowed: 20,40,50,100)' });
+
+  // Bill feasibility validation (20€ / 50€ only) + breakdown
+  const billResult = computeBills(amount);
+  if (!billResult.ok) {
+    return res.status(400).json({ error: 'Invalid amount (allowed bills: 20€ and 50€)' });
   }
 
   const conn = await db.getConnection();
@@ -117,7 +143,14 @@ router.post('/:id/withdraw', async (req, res) => {
     );
 
     await conn.commit();
-    res.json({ ok: true, accountId, withdrawn: amount, balance: newBalance });
+
+    res.json({
+      ok: true,
+      accountId,
+      withdrawn: amount,
+      balance: newBalance,
+      bills: billResult.bills
+    });
   } catch (err) {
     await conn.rollback();
     console.error('Withdraw error:', err);
