@@ -24,9 +24,12 @@ function computeBills(amount) {
   return { ok: false };
 }
 
+// GET /accounts/:id/transactions?limit=10&before=<created_at>|<id>&after=<created_at>|<id>
 router.get('/:id/transactions', async (req, res) => {
   const accountId = Number(req.params.id);
   const limit = Number(req.query.limit ?? 10);
+  const before = req.query.before ? String(req.query.before) : null;
+  const after = req.query.after ? String(req.query.after) : null;
 
   // Validate inputs
   if (!Number.isInteger(accountId) || accountId <= 0) {
@@ -35,17 +38,112 @@ router.get('/:id/transactions', async (req, res) => {
 
   const safeLimit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 10;
 
+  if (before && after) {
+    return res.status(400).json({ error: 'Use only one: before or after' });
+  }
+
+  function parseCursor(cur) {
+    // format: "<epochMs>|<id>"
+    const parts = String(cur).split('|');
+    if (parts.length !== 2) return null;
+
+    const ms = Number(parts[0]);
+    const id = Number(parts[1]);
+
+    if (!Number.isFinite(ms) || ms <= 0) return null;
+    if (!Number.isInteger(id) || id <= 0) return null;
+
+    return { ms, id };
+  }
+
+  function makeCursor(row) {
+    // row.created_at can be Date or string
+    const ms = row.created_at instanceof Date
+      ? row.created_at.getTime()
+      : Date.parse(String(row.created_at));
+
+    return `${ms}|${row.id}`;
+  }
+
   try {
-    const sql = `
+    // Fetch one extra row to detect "hasMore"
+    const pageSizePlusOne = safeLimit + 1;
+
+    // Base query fields (keep same shape as before)
+    const baseSelect = `
       SELECT t.id, t.tx_type, t.amount, t.created_at
       FROM transactions t
       WHERE t.account_id = ?
-      ORDER BY t.created_at DESC, t.id DESC
-      LIMIT ${safeLimit}
     `;
 
-    const [rows] = await db.execute(sql, [accountId]);
-    res.json(rows);
+    let rows = [];
+
+    if (!before && !after) {
+      // First page: newest -> oldest
+      const sql = `
+        ${baseSelect}
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT ${pageSizePlusOne}
+      `;
+      const [r] = await db.execute(sql, [accountId]);
+      rows = r;
+    } else if (before) {
+      // Next page (older): created_at/id strictly less than cursor
+      const c = parseCursor(before);
+      if (!c) return res.status(400).json({ error: 'Invalid before cursor' });
+
+      const sql = `
+        ${baseSelect}
+          AND (
+            t.created_at < FROM_UNIXTIME(?/1000)
+            OR (t.created_at = FROM_UNIXTIME(?/1000) AND t.id < ?)
+          )
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT ${pageSizePlusOne}
+      `;
+      const [r] = await db.execute(sql, [accountId, c.ms, c.ms, c.id]);
+      rows = r;
+    } else {
+      // Prev page (newer): created_at/id strictly greater than cursor
+      // We fetch ASC (oldest->newest) then reverse to keep response DESC.
+      const c = parseCursor(after);
+      if (!c) return res.status(400).json({ error: 'Invalid after cursor' });
+
+      const sql = `
+        ${baseSelect}
+          AND (
+          t.created_at > FROM_UNIXTIME(?/1000)
+          OR (t.created_at = FROM_UNIXTIME(?/1000) AND t.id > ?)
+        )
+      ORDER BY t.created_at ASC, t.id ASC
+      LIMIT ${pageSizePlusOne}
+    `;
+    const [r] = await db.execute(sql, [accountId, c.ms, c.ms, c.id]);
+    rows = r.reverse();
+    }
+
+    // Determine hasMore in the requested direction
+    const hasMore = rows.length > safeLimit;
+    if (hasMore) rows = rows.slice(0, safeLimit);
+
+    const items = rows;
+
+    // Cursors:
+    // - nextCursor: use last item (oldest on page) to fetch older (before=nextCursor)
+    // - prevCursor: use first item (newest on page) to fetch newer (after=prevCursor)
+    const nextCursor = (items.length > 0 && (before || (!before && !after))) // pages where "older" makes sense
+      ? (hasMore ? makeCursor(items[items.length - 1]) : null)
+      : null;
+
+    const prevCursor = (items.length > 0 && (before || after)) // if not first page, allow going back
+      ? makeCursor(items[0])
+      : null;
+
+    res.json({
+      items,
+      nextCursor, // pass as before=nextCursor
+      prevCursor, // pass as after=prevCursor
+    });
   } catch (err) {
     console.error('DB error in /accounts/:id/transactions:', err);
     res.status(500).json({ error: 'Database error' });
