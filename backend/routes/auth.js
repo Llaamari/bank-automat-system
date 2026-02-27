@@ -90,17 +90,19 @@ router.post('/login', async (req, res) => {
       `SELECT account_id, role
        FROM card_accounts
        WHERE card_id = ?
-       ORDER BY role ASC`,
+       ORDER BY FIELD(role, 'debit', 'credit')`,
       [card.id]
     );
 
+    // validointi (selkeä 4xx)
     if (links.length === 0) {
       await conn.rollback();
-      return res.status(500).json({ error: 'Card has no linked accounts' });
+      return res.status(409).json({ error: 'Card has no linked accounts' });
     }
 
     await conn.commit();
 
+    // response: always accounts[{role, accountId}]
     return res.json({
       ok: true,
       accounts: links.map(l => ({ role: l.role, accountId: l.account_id })),
