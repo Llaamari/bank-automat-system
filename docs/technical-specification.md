@@ -343,7 +343,7 @@ During the demo, the following will be shown:
   - Login button state is restored
   - Dialog closes via `reject()`
 
-## 13. Grade 4 Features (Advanced Functionality)
+## 13. Advanced Functionalities
 
 ### Persistent Card Lock (Database-Level Security)
 
@@ -516,7 +516,7 @@ After a withdrawal:
 - The system refreshes to the first page
 - The newest transaction becomes immediately visible
 
-### Testing Instructions (Grade 4 Features)
+### Testing Instructions
 
 #### Persistent Card Lock
 
