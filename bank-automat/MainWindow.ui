@@ -99,7 +99,7 @@
       <item>
        <widget class="QPushButton" name="withdraw50Button">
         <property name="text">
-         <string>60</string>
+         <string>50</string>
         </property>
        </widget>
       </item>
@@ -116,7 +116,7 @@
       <item>
        <widget class="QPushButton" name="customWithdrawButton">
         <property name="text">
-         <string>Raise</string>
+         <string>Withdraw</string>
         </property>
        </widget>
       </item>

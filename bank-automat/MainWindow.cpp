@@ -7,6 +7,7 @@
 #include <QLocale>
 #include <QShortcut>
 #include <QTabBar>
+#include <QTabWidget>
 #include <QApplication>
 #include <QEvent>
 #include <QHeaderView>
@@ -51,6 +52,10 @@ MainWindow::MainWindow(ApiClient* api, int accountId, const QString& role, QWidg
     ui->transactionsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->transactionsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->transactionsTable->horizontalHeader()->setStretchLastSection(true);
+
+    // Tabs: show "No transactions" only when the user actually opens the Transactions tab
+    connect(ui->tabWidget, &QTabWidget::currentChanged,
+            this, &MainWindow::on_tabWidget_currentChanged);
 
     // Connect ApiClient signals
     connect(m_api, &ApiClient::balanceResult,
@@ -150,6 +155,8 @@ void MainWindow::requestTransactionsFirstPage()
     m_nextCursor.clear();
     m_prevCursor.clear();
     m_lastTxMove = TxMove::First;
+    m_hasAnyTransactions = false;
+    m_noTransactionsPopupShown = false;
     updateTransactionsNavUi();
 
     m_api->getTransactionsPage(m_accountId, TX_PAGE_SIZE);
@@ -305,16 +312,34 @@ void MainWindow::onTransactionsPageResult(bool ok, QJsonArray items,
         return;
     }
 
-    // If API returns an empty page, don't wipe the table or break pagination state.
-    // Also revert page index move:
+    // Empty result handling:
+    // - On initial load (First page) an empty list means: there are no transactions for this account.
+    //   Do NOT show any popup unless the user is on the Transactions tab.
+    // - On Next/Prev navigation an empty list means: you've reached the end in that direction.
     if (items.isEmpty()) {
-        QMessageBox::information(this, "Transactions", "No more transactions in that direction.");
-        // Undo last move (best-effort): if user pressed Next we already incremented; if Prev we decremented.
-        // We can detect by cursors: simplest is just clamp
+        if (m_lastTxMove == TxMove::First) {
+            // No transactions at all -> keep UI calm on login.
+            m_hasAnyTransactions = false;
+            m_nextCursor.clear();
+            m_prevCursor.clear();
+            m_lastTxMove = TxMove::None;
+            updateTransactionsUi(QJsonArray());
+            updateTransactionsNavUi();
+            return;
+        }
+
+        // Navigation beyond available pages.
+        if (ui->tabWidget->currentIndex() == 2) {
+            QMessageBox::information(this, "Transactions", "No more transactions in that direction.");
+        }
+
         if (m_txPageIndex < 0) m_txPageIndex = 0;
         updateTransactionsNavUi();
         return;
     }
+
+    m_hasAnyTransactions = true;
+    m_noTransactionsPopupShown = false;
 
     // Only overwrite nextCursor if server gave one.
     // This prevents "Next" becoming disabled after returning with Prev.
@@ -340,6 +365,18 @@ void MainWindow::onTransactionsPageResult(bool ok, QJsonArray items,
     m_lastTxMove = TxMove::None;
     updateTransactionsUi(items);
     updateTransactionsNavUi();
+}
+
+void MainWindow::on_tabWidget_currentChanged(int index)
+{
+    // Transactions tab index is 2 (Balance=0, Withdraw=1, Transactions=2)
+    if (index != 2) return;
+
+    // If there are no transactions, show a single informative popup when the user opens the tab.
+    if (!m_busy && !m_hasAnyTransactions && ui->transactionsTable->rowCount() == 0 && !m_noTransactionsPopupShown) {
+        m_noTransactionsPopupShown = true;
+        QMessageBox::information(this, "Transactions", "No transactions.");
+    }
 }
 
 void MainWindow::updateTransactionsNavUi()

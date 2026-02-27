@@ -41,6 +41,9 @@ private slots:
     void on_nextTransactionsButton_clicked();
     void on_customWithdrawButton_clicked();
 
+    // Tabs
+    void on_tabWidget_currentChanged(int index);
+
     // API results
     void onBalanceResult(bool ok, QJsonObject data, QString error);
     void onWithdrawResult(bool ok, QJsonObject data, QString error);
@@ -90,4 +93,8 @@ private:
 
     enum class TxMove { None, First, Next, Prev };
     TxMove m_lastTxMove = TxMove::None;
+
+    // Used to avoid showing a transactions popup on login when the user is not on the Transactions tab.
+    bool m_hasAnyTransactions = false;
+    bool m_noTransactionsPopupShown = false;
 };
