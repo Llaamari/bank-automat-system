@@ -616,3 +616,9 @@ During login:
 This design cleanly separates:
 - Card identity (authentication)
 - Account selection (transaction context)
+
+## 15. State Diagram
+
+![Bank Automat System state diagram](state-diagram.png)
+
+The diagram describes the main UI states and transitions for login, account selection (dual cards), main menu, balance, withdrawals, transactions, logout/reset, and timeouts/lock behavior.
