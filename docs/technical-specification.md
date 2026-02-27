@@ -551,3 +551,68 @@ Next button becomes disabled on final page.
 6. Perform a withdrawal.
 7. Transactions reset to first page.
 8. New transaction appears at top.
+
+## 14. Dual Cards (Debit + Credit on the Same Card)
+
+### Overview
+
+The system supports **dual cards**, meaning a single physical card can be linked to:
+
+- one **debit account**
+- one **credit account**
+
+This allows the user to choose which account to use after successful login.
+
+### Data Model
+
+The relationship between cards and accounts is implemented using a junction table:
+```
+cards 1 --- N card_accounts N --- 1 accounts
+```
+
+#### card_accounts table
+
+| Column      | Type    | Description |
+|------------|---------|-------------|
+| card_id     | INT (FK) | References `cards.id` |
+| account_id  | INT (FK) | References `accounts.id` |
+| role        | ENUM('debit','credit') | Defines account type for the card |
+| created_at  | DATETIME | Link creation timestamp |
+
+#### Constraints
+
+- `PRIMARY KEY (card_id, account_id)`
+- `UNIQUE (card_id, role)`  
+  → prevents assigning two debit or two credit accounts to the same card
+
+These constraints ensure:
+
+- A card can have **maximum two links**
+- Only one `debit` and one `credit` role per card
+- Duplicate links are prevented at database level
+
+### Backend Behavior
+
+The endpoint:
+```
+POST /crud/card-accounts
+```
+- Accepts: `card_id`, `account_id`, `role`
+- Returns:
+  - `201` on success
+  - `409` if:
+    - the same account is already linked to the card
+    - the same role (debit/credit) is already assigned
+
+The database enforces role uniqueness, and the backend converts duplicate key errors into HTTP 409 responses.
+
+### Login Flow Impact
+
+During login:
+
+- If the card is linked to **one account** → system proceeds automatically.
+- If the card is linked to **two accounts (debit + credit)** → user must select which account to use.
+
+This design cleanly separates:
+- Card identity (authentication)
+- Account selection (transaction context)

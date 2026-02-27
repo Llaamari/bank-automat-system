@@ -76,16 +76,11 @@ CREATE TABLE IF NOT EXISTS card_accounts (
 
   PRIMARY KEY (card_id, account_id),
 
-  CONSTRAINT fk_ca_card
-    FOREIGN KEY (card_id) REFERENCES cards(id)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-
-  CONSTRAINT fk_ca_account
-    FOREIGN KEY (account_id) REFERENCES accounts(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE,
+  -- Enforce max 1 debit + 1 credit per card
+  UNIQUE KEY uq_card_accounts_card_role (card_id, role),
 
   INDEX idx_ca_account_id (account_id),
-  INDEX idx_ca_card_role (card_id, role)
+  INDEX idx_ca_card_role_lookup (card_id, role)
 ) ENGINE=InnoDB;
 
 -- -------------------------
@@ -189,8 +184,23 @@ SET @col_exists := (
     AND TABLE_NAME = 'card_accounts'
     AND COLUMN_NAME = 'role'
 );
-SET @sql := IF(@col_exists = 0,
+SET @sql := IF(
+  @col_exists = 0,
   'ALTER TABLE card_accounts ADD COLUMN role ENUM(''debit'',''credit'') NOT NULL DEFAULT ''debit'' AFTER account_id',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @pk_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'card_accounts'
+    AND INDEX_NAME = 'PRIMARY'
+);
+SET @sql := IF(
+  @pk_exists = 0,
+  'ALTER TABLE card_accounts ADD PRIMARY KEY (card_id, account_id)',
   'SELECT 1'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
@@ -201,10 +211,25 @@ SET @idx_exists := (
   FROM INFORMATION_SCHEMA.STATISTICS
   WHERE TABLE_SCHEMA = DATABASE()
     AND TABLE_NAME = 'card_accounts'
-    AND INDEX_NAME = 'idx_ca_card_role'
+    AND INDEX_NAME = 'uq_card_accounts_card_role'
 );
-SET @sql := IF(@idx_exists = 0,
-  'ALTER TABLE card_accounts ADD INDEX idx_ca_card_role (card_id, role)',
+SET @sql := IF(
+  @idx_exists = 0,
+  'ALTER TABLE card_accounts ADD UNIQUE KEY uq_card_accounts_card_role (card_id, role)',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @idx_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'card_accounts'
+    AND INDEX_NAME = 'idx_ca_account_id'
+);
+SET @sql := IF(
+  @idx_exists = 0,
+  'ALTER TABLE card_accounts ADD INDEX idx_ca_account_id (account_id)',
   'SELECT 1'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

@@ -33,8 +33,28 @@ router.post('/', async (req, res) => {
   res.status(201).json({ card_id: cardId, account_id: accountId, role });
 } catch (err) {
   if (err.code === 'ER_DUP_ENTRY') {
-    return res.status(409).json({ error: 'Card already linked to this account' });
+    
+    // Tarkastetaan mikä unique constraint rikkoutui
+    const msg = err.sqlMessage || '';
+    
+    if (msg.includes('uq_card_accounts_card_role')) {
+      return res.status(409).json({
+        error: 'Card already has this role assigned (debit/credit)'
+      });
+    }
+
+    if (msg.includes('uq_card_accounts_card_account')) {
+      return res.status(409).json({
+        error: 'Card already linked to this account'
+      });
+    }
+
+    // fallback jos index-nimeä ei löydy
+    return res.status(409).json({
+      error: 'Duplicate card-account link or role'
+    });
   }
+
   console.error('card_accounts POST:', err);
   res.status(500).json({ error: 'Database error' });
 }
