@@ -12,6 +12,7 @@ const crudAccounts = require('./routes/crud/accounts');
 const crudCards = require('./routes/crud/cards');
 const crudTransactions = require('./routes/crud/transactions');
 const crudCardAccounts = require('./routes/crud/card_accounts');
+const imagesRouter = require('./routes/images');
 const cors = require('cors');
 
 var app = express();
@@ -33,5 +34,6 @@ app.use('/crud/accounts', crudAccounts);
 app.use('/crud/cards', crudCards);
 app.use('/crud/transactions', crudTransactions);
 app.use('/crud/card-accounts', crudCardAccounts);
+app.use('/images', imagesRouter);
 
 module.exports = app;

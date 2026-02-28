@@ -1061,6 +1061,35 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "{{baseUrl}}/images/upload",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "uuid": "dc237534-7f3e-4957-886b-ae80b8a8bd13",
+              "src": "/C:/Users/laura/Downloads/aku.png"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/images/upload",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "upload"
+          ]
+        }
+      },
+      "response": []
     }
   ],
   "event": [
