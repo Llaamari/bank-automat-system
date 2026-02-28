@@ -32,6 +32,92 @@ QString ApiClient::joinUrl(const QString &baseUrl, const QString &path)
     return b + p;
 }
 
+void ApiClient::fetchImageByFilename(const QString& filename,
+                                    std::function<void(const QByteArray& data)> onSuccess,
+                                    std::function<void(const QString& error)> onError)
+{
+    const QString fn = filename.trimmed();
+    if (fn.isEmpty()) {
+        onError(QStringLiteral("No filename"));
+        return;
+    }
+
+    const QUrl url(joinUrl(m_baseUrl, "/images/uploads/" + fn));
+    QNetworkRequest req(url);
+    req.setRawHeader("Accept", "image/*");
+
+    QNetworkReply* reply = m_net.get(req);
+    connect(reply, &QNetworkReply::finished, this, [reply, onSuccess, onError]() {
+        if (reply->error() != QNetworkReply::NoError) {
+            const QString err = reply->errorString();
+            reply->deleteLater();
+            onError(err);
+            return;
+        }
+        const QByteArray data = reply->readAll();
+        reply->deleteLater();
+        onSuccess(data);
+    });
+}
+
+void ApiClient::getCustomerImageFilenameForAccount(
+    int accountId,
+    std::function<void(bool ok, const QString& filename, const QString& error)> cb)
+{
+    // /crud/accounts/:id -> customer_id
+    const QString accountPath = QString("/crud/accounts/%1").arg(accountId);
+    getJson(accountPath, [this, cb](bool ok, int httpStatus, QJsonDocument json, QString error) {
+        if (!ok) {
+            const QString msg = error.isEmpty()
+                ? QString("Failed to fetch account (HTTP %1)").arg(httpStatus)
+                : error;
+            cb(false, QString(), msg);
+            return;
+        }
+        if (!json.isObject()) {
+            cb(false, QString(), QStringLiteral("Invalid account response"));
+            return;
+        }
+
+        const QJsonObject acc = json.object();
+
+        // Common field names: customer_id or customerId
+        int customerId = -1;
+        if (acc.contains("customer_id")) customerId = acc.value("customer_id").toInt(-1);
+        if (customerId < 0 && acc.contains("customerId")) customerId = acc.value("customerId").toInt(-1);
+
+        if (customerId < 0) {
+            cb(false, QString(), QStringLiteral("Account does not contain customer_id"));
+            return;
+        }
+
+        // /crud/customers/:id -> image_filename
+        const QString custPath = QString("/crud/customers/%1").arg(customerId);
+        getJson(custPath, [cb](bool ok2, int http2, QJsonDocument json2, QString error2) {
+            if (!ok2) {
+                const QString msg = error2.isEmpty()
+                    ? QString("Failed to fetch customer (HTTP %1)").arg(http2)
+                    : error2;
+                cb(false, QString(), msg);
+                return;
+            }
+            if (!json2.isObject()) {
+                cb(false, QString(), QStringLiteral("Invalid customer response"));
+                return;
+            }
+
+            const QJsonObject cust = json2.object();
+            QString filename;
+
+            if (cust.contains("image_filename") && !cust.value("image_filename").isNull()) {
+                filename = cust.value("image_filename").toString();
+            }
+
+            cb(true, filename, QString());
+        });
+    });
+}
+
 QString ApiClient::extractErrorMessage(const QJsonDocument &json, const QString &fallback)
 {
     if (json.isObject()) {

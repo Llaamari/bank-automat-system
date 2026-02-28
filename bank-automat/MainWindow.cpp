@@ -11,6 +11,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QHeaderView>
+#include <QResizeEvent>
 
 static constexpr int IDLE_TIMEOUT_MS = 30 * 1000;
 
@@ -27,6 +28,37 @@ MainWindow::MainWindow(ApiClient* api, int accountId, const QString& role, QWidg
       m_accountRole(role)
 {
     ui->setupUi(this);
+
+    // Image UI init
+    showImagePlaceholder(QStringLiteral("No image"));
+
+    // Fetch customer's image filename via account -> customer, then fetch image bytes
+    if (m_api) {
+        showImagePlaceholder(QStringLiteral("Loading..."));
+        m_api->getCustomerImageFilenameForAccount(m_accountId,
+            [this](bool ok, const QString& filename, const QString& error) {
+                if (!ok) {
+                    showImagePlaceholder(QStringLiteral("No image"));
+                    return;
+                }
+
+                const QString fn = filename.trimmed();
+                if (fn.isEmpty()) {
+                    showImagePlaceholder(QStringLiteral("No image"));
+                    return;
+                }
+
+                m_api->fetchImageByFilename(fn,
+                    [this](const QByteArray& data) {
+                        setImageFromBytes(data);
+                    },
+                    [this](const QString&) {
+                        showImagePlaceholder(QStringLiteral("Image not found"));
+                    }
+                );
+            }
+        );
+    }
 
     static constexpr int IDLE_TIMEOUT_MS = 30 * 1000;
     m_idleTimer.setInterval(IDLE_TIMEOUT_MS);
@@ -433,4 +465,44 @@ void MainWindow::updateTransactionsUi(const QJsonArray &rows)
     }
 
     ui->transactionsTable->resizeColumnsToContents();
+}
+
+void MainWindow::showImagePlaceholder(const QString& text)
+{
+    if (!ui || !ui->imageLabel) return;
+    ui->imageLabel->clear();
+    ui->imageLabel->setText(text);
+    m_originalPixmap = QPixmap();
+}
+
+void MainWindow::setImageFromBytes(const QByteArray& data)
+{
+    QPixmap pix;
+    if (!pix.loadFromData(data)) {
+        showImagePlaceholder(QStringLiteral("Image decode failed"));
+        return;
+    }
+    m_originalPixmap = pix;
+    rescaleImageToLabel();
+}
+
+void MainWindow::rescaleImageToLabel()
+{
+    if (!ui || !ui->imageLabel) return;
+    if (m_originalPixmap.isNull()) return;
+
+    const QSize target = ui->imageLabel->size();
+    const QPixmap scaled = m_originalPixmap.scaled(
+        target,
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+    );
+    ui->imageLabel->setPixmap(scaled);
+    ui->imageLabel->setAlignment(Qt::AlignCenter);
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+    rescaleImageToLabel();
 }

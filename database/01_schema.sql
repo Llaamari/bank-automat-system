@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   account_type  ENUM('debit','credit') NOT NULL DEFAULT 'debit',
   balance       DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   credit_limit  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  is_locked     TINYINT(1) NOT NULL DEFAULT 0,
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT fk_accounts_customer
@@ -273,6 +274,19 @@ SET @col_exists := (
 );
 SET @sql := IF(@col_exists = 0,
   'ALTER TABLE accounts ADD COLUMN credit_limit DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER balance',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- accounts.is_locked
+SET @col_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'accounts'
+    AND COLUMN_NAME = 'is_locked'
+);
+SET @sql := IF(@col_exists = 0,
+  'ALTER TABLE accounts ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0 AFTER credit_limit',
   'SELECT 1'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

@@ -6,6 +6,8 @@
 #include <QTimer>
 #include <QEvent>
 #include <QVector>
+#include <QPixmap>
+#include <QByteArray>
 
 class ApiClient;
 
@@ -28,6 +30,7 @@ signals:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private slots:
     // UI events
@@ -71,11 +74,17 @@ private:
     void updateBalanceUi(const QJsonObject& data);
     void updateTransactionsUi(const QJsonArray& rows);
     void updateTransactionsNavUi();
+    // Image helpers
+    void showImagePlaceholder(const QString& text = QStringLiteral("No image"));
+    void setImageFromBytes(const QByteArray& data);
+    void rescaleImageToLabel();
 
     void setWithdrawError(const QString& msg);
     void clearWithdrawError();
 
     bool m_busy = false;
+
+    QPixmap m_originalPixmap;
 
     // 30s inactivity handling
     void resetIdleTimer();

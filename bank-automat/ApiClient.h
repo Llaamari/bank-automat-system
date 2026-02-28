@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <functional>
+#include <QByteArray>
 
 class ApiClient : public QObject
 {
@@ -31,6 +32,14 @@ public:
     // Backward-compatible helper (first page only)
     void getTransactions(int accountId, int limit = 10);
 
+    // Images
+    void fetchImageByFilename(const QString& filename,
+                             std::function<void(const QByteArray& data)> onSuccess,
+                             std::function<void(const QString& error)> onError);
+
+    // Helper: get image filename for the customer owning this account (uses /crud/accounts and /crud/customers)
+    void getCustomerImageFilenameForAccount(int accountId,
+                                            std::function<void(bool ok, const QString& filename, const QString& error)> cb);
 signals:
     // Backward-compatible: if backend returns multiple accounts, this will pick one (prefer debit).
     void loginResult(bool ok, int accountId, QString error);
