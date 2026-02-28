@@ -107,14 +107,20 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/crud/customers/1",
+              "raw": "{{baseUrl}}/crud/customers/:id",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "crud",
                 "customers",
-                "1"
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
               ]
             }
           },
@@ -140,7 +146,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"first_name\": \"Postman2\",\r\n  \"last_name\": \"Customer2\",\r\n  \"address\": \"Updated Street 9\"\r\n}",
+              "raw": "{\r\n  \"first_name\": \"Aku\",\r\n  \"last_name\": \"Ankka\",\r\n  \"address\": \"Ankkalinna 1\",\r\n  \"image_filename\": \"aku.jpg\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -871,7 +877,7 @@
       ]
     },
     {
-      "name": "{{baseUrl}}/api/health",
+      "name": "{{baseUrl}}/health",
       "event": [
         {
           "listen": "test",
@@ -910,12 +916,11 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/health",
+          "raw": "{{baseUrl}}/health",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "api",
             "health"
           ]
         }
@@ -923,16 +928,22 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/auth/login",
+      "name": "{{baseUrl}}/auth/login",
       "request": {
         "auth": {
           "type": "noauth"
         },
         "method": "POST",
-        "header": [],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
         "body": {
           "mode": "raw",
-          "raw": "{ \"cardNumber\": \"1234567890123456\", \"pin\": \"1234\" }",
+          "raw": "{ \"cardNumber\":\"11111111\", \"pin\":\"1234\" }",
           "options": {
             "raw": {
               "language": "json"
@@ -940,12 +951,11 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/auth/login",
+          "raw": "{{baseUrl}}/auth/login",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "api",
             "auth",
             "login"
           ]
@@ -954,7 +964,7 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/accounts/:id/balance",
+      "name": "{{baseUrl}}/accounts/:id/balance",
       "request": {
         "auth": {
           "type": "noauth"
@@ -962,12 +972,11 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/accounts/:id/balance",
+          "raw": "{{baseUrl}}/accounts/:id/balance",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "api",
             "accounts",
             ":id",
             "balance"
@@ -975,7 +984,7 @@
           "variable": [
             {
               "key": "id",
-              "value": "1"
+              "value": ""
             }
           ]
         }
@@ -983,7 +992,7 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/accounts/:id/withdraw",
+      "name": "{{baseUrl}}/accounts/:id/withdraw",
       "request": {
         "auth": {
           "type": "noauth"
@@ -992,7 +1001,7 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{ \"amount\": 50 }",
+          "raw": "{ \"amount\": 30 }",
           "options": {
             "raw": {
               "language": "json"
@@ -1000,12 +1009,11 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/api/accounts/:id/withdraw",
+          "raw": "{{baseUrl}}/accounts/:id/withdraw",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "api",
             "accounts",
             ":id",
             "withdraw"
@@ -1013,7 +1021,7 @@
           "variable": [
             {
               "key": "id",
-              "value": "1"
+              "value": ""
             }
           ]
         }
@@ -1021,7 +1029,7 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/accounts/:id/transactions?limit=10",
+      "name": "{{baseUrl}}/accounts/:id/transactions?limit=10",
       "request": {
         "auth": {
           "type": "noauth"
@@ -1029,12 +1037,11 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/accounts/:id/transactions?limit=10",
+          "raw": "{{baseUrl}}/accounts/:id/transactions?limit=10",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "api",
             "accounts",
             ":id",
             "transactions"
@@ -1048,7 +1055,7 @@
           "variable": [
             {
               "key": "id",
-              "value": "1"
+              "value": ""
             }
           ]
         }

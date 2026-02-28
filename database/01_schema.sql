@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS customers (
   first_name   VARCHAR(100) NOT NULL,
   last_name    VARCHAR(100) NOT NULL,
   address      VARCHAR(255) NOT NULL,
+  image_filename VARCHAR(255) NULL,
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -105,6 +106,20 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- "Migrations": add missing columns/indexes
 -- (safe to re-run on existing DB)
 -- ============================================
+-- customers.image_filename
+SET @col_exists := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'customers'
+    AND COLUMN_NAME = 'image_filename'
+);
+SET @sql := IF(@col_exists = 0,
+  'ALTER TABLE customers ADD COLUMN image_filename VARCHAR(255) NULL AFTER address',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 
 -- cards.card_number
 SET @col_exists := (

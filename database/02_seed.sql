@@ -30,11 +30,11 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- -------------------------
 -- customers
 -- -------------------------
-INSERT INTO customers (id, first_name, last_name, address)
+INSERT INTO customers (id, first_name, last_name, address, image_filename)
 VALUES
-(3001, 'Debit',  'Only', 'Debit Street 1'),
-(3002, 'Credit', 'Only', 'Credit Street 1'),
-(3003, 'Dual',   'User', 'Dual Street 1');
+(3001, 'Debit',  'Only', 'Debit Street 1', 'debit.jpg'),
+(3002, 'Credit', 'Only', 'Credit Street 1', NULL),
+(3003, 'Dual',   'User', 'Dual Street 1', 'dual.jpg');
 
 -- -------------------------
 -- accounts
