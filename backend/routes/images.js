@@ -65,4 +65,9 @@ router.post('/upload', (req, res) => {
   });
 });
 
+router.get('/:filename', (req, res) => {
+  const filename = req.params.filename;
+  return res.redirect(302, `/api/images/uploads/${filename}`);
+});
+
 module.exports = router;
