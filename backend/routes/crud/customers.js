@@ -42,9 +42,10 @@ router.post('/', async (req, res) => {
   try {
     const { first_name, last_name, address, image_filename } = req.body;
 
-    const imageValue = image_filename && image_filename.trim() !== ''
-      ? image_filename
-      : null;
+    const imageValue =
+      typeof image_filename === 'string' && image_filename.trim() !== ''
+        ? image_filename.trim()
+        : null;
 
     const [result] = await db.query(
       'INSERT INTO customers (first_name, last_name, address, image_filename) VALUES (?, ?, ?, ?)',
@@ -69,9 +70,10 @@ router.put('/:id', async (req, res) => {
   try {
     const { first_name, last_name, address, image_filename } = req.body;
 
-    const imageValue = image_filename && image_filename.trim() !== ''
-      ? image_filename
-      : null;
+    const imageValue =
+      typeof image_filename === 'string' && image_filename.trim() !== ''
+        ? image_filename.trim()
+        : null;
 
     const [result] = await db.query(
       `UPDATE customers 
@@ -93,6 +95,40 @@ router.put('/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('customers PUT:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// PATCH customer image only
+// PATCH /crud/customers/:id/image
+// Body: { "image_filename": "<filename>" }  (empty string -> NULL)
+router.patch('/:id/image', async (req, res) => {
+  try {
+    const { image_filename } = req.body;
+
+    const imageValue =
+      typeof image_filename === 'string' && image_filename.trim() !== ''
+        ? image_filename.trim()
+        : null;
+
+    const [result] = await db.query(
+      'UPDATE customers SET image_filename = ? WHERE id = ?',
+      [imageValue, req.params.id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    // Return the updated customer row
+    const [rows] = await db.query(
+      'SELECT id, first_name, last_name, address, image_filename FROM customers WHERE id = ?',
+      [req.params.id]
+    );
+
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Database error' });
   }
 });
