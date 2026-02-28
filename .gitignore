@@ -4,3 +4,5 @@ bank-automat/.qtcreator/
 bank-automat/*.user
 backend/.env
 .vscode
+backend/public/images/uploads/
+backend/public/images/uploads/*
