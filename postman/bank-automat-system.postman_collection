@@ -146,7 +146,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"first_name\": \"Aku\",\r\n  \"last_name\": \"Ankka\",\r\n  \"address\": \"Ankkalinna 1\",\r\n  \"image_filename\": \"aku.jpg\"\r\n}",
+              "raw": "{\r\n  \"first_name\": \"Debit\",\r\n  \"last_name\": \"Only\",\r\n  \"address\": \"Debit Street 1\",\r\n  \"image_filename\": \"1772278644087-6b5fd889-633f-4076-84b7-e0f3922e0030.png\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -196,6 +196,41 @@
                 "crud",
                 "customers",
                 "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH (Image)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"image_filename\": \"1772276021462-7958702c-1e68-4675-b9aa-cd354c13f98f.png\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/crud/customers/:id/image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "crud",
+                "customers",
+                ":id",
+                "image"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
               ]
             }
           },
@@ -1086,6 +1121,30 @@
           "path": [
             "images",
             "upload"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "{{baseUrl}}/images/:filename",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/images/:filename",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            ":filename"
+          ],
+          "variable": [
+            {
+              "key": "filename",
+              "value": ""
+            }
           ]
         }
       },
